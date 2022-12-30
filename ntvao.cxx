@@ -44,7 +44,7 @@ void usage( char const * perr = 0 )
     printf( "     -p     show performance information at app exit.\n" ); 
     printf( "     -s:X   speed in Hz. Default is 0, which is as fast as possible.\n" );
     printf( "            for the Apple 1's speed use -s:1022727\n" );
-    printf( "     -t     enable debug tracing to ntva1.log\n" );
+    printf( "     -t     enable debug tracing to ntvao.log\n" );
     printf( "     -u     disable converting output chars to uppercase.\n" );
     printf( "  notes:\n" );
     printf( "     --     to assemble, load, and run test.s:\n" );
@@ -59,9 +59,9 @@ void usage( char const * perr = 0 )
     printf( "     --     control keys not passed to the Apple 1:\n" );
     printf( "                ^d        save a 64k memory dump in ntvao.dmp\n" );
     printf( "                ^l        load a file into the input stream\n" );
+    printf( "                          likely an Apple 1 format .hex for monitor or .bas for BASIC\n" );
     printf( "                ^q        quit the app\n" );
     printf( "                ^r        soft reset via the 6502's 0xfffc reset vector\n" );
-    printf( "                          likely an Apple 1 format .hex for monitor or .bas for BASIC\n" );
     printf( "                ^break    forcibly exit the app\n" );
     exit( -1 );
 } //usage
@@ -560,6 +560,8 @@ int main( int argc, char * argv[] )
                 showPerformance = true;
             else if ( 'c' == ca )
                 use40x24 = false;
+            else if ( '?' == ca )
+                usage();
             else
                 usage( "invalid argument specified" );
         }
