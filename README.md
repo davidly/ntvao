@@ -31,7 +31,6 @@ This app (like many others!) emulates an Apple 1. To invoke it in that mode, run
                             likely an Apple 1 format .hex for monitor or .bas for BASIC
                   ^q        quit the app
                   ^r        soft reset via the 6502's 0xfffc reset vector
-
                   ^break    forcibly exit the app
   
 file descriptions:
