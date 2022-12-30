@@ -1,9 +1,7 @@
 # ntvao
 NT Virtual Apple One
 
-This app (like many others!) emulates an Apple 1. To invoke in that mode, run ntvao apple1
-
-NT Virtual Apple 1 Machine: emulates an Apple 1 on Windows
+This app (like many others!) emulates an Apple 1. To invoke it in that mode, run ntvao apple1
 
     usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] <.hex file>
 
@@ -64,6 +62,8 @@ notes:
     of whether the real Monitor is installed.
     
     Tracing with -t -i to ntvao.log disassembles code as it runs, so you can see how things work, or don't work.
+    
+    The name is from ntvdm -- the Windows NT Virtual DOS Machine.
     
     The -p switch will show runtime information. In this example, the app took 22 seconds to run, but on a real Apple 1 it would
     have taken three and a half hours.
