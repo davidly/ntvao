@@ -2,8 +2,8 @@
 
 extern uint8_t memory[ 65536 ];
 
-#define OPCODE_HALT 0xff  // the 6502 has no halt instruction. Make one up.
 #define OPCODE_HOOK 0x0f  // this unused 6502 instruction will call the hook callback
+#define OPCODE_HALT 0xff  // this unused 6502 instruction will terminate the emulator
 
 struct MOS_6502
 {
@@ -66,7 +66,7 @@ extern MOS_6502 cpu;
 // callbacks into hosting app
 
 extern void mos6502_invoke_halt( void );                 // called when the OPCODE_HALT instruction is executed
-extern uint8_t mos6502_invoke_hook( void );              // called with the OPCODE_HOOK instruction is executed
+extern uint8_t mos6502_invoke_hook( void );              // called when the OPCODE_HOOK instruction is executed
 extern uint8_t mos6502_apple1_load( uint16_t address );  // when 0xd010-0xd013 are used with a load instruction
 extern void mos6502_apple1_store( uint16_t address );    // when 0xd010-0xd013 are used with a store instruction
 

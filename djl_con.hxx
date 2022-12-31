@@ -24,7 +24,7 @@ class ConsoleConfiguration
 
         bool IsEstablished() { return ( 0 != consoleHandle ); }
 
-        void EstablishConsole( SHORT width = 80, SHORT height = 24 )
+        void EstablishConsole( SHORT width = 80, SHORT height = 24, PHANDLER_ROUTINE handler = NULL )
         {
             if ( 0 != consoleHandle )
                 return;
@@ -57,7 +57,7 @@ class ConsoleConfiguration
             SetConsoleMode( consoleHandle, dwMode );
                                                    
             // don't automatically have ^c terminate the app. ^break will still terminate the app
-            SetConsoleCtrlHandler( NULL, TRUE );
+            SetConsoleCtrlHandler( handler, TRUE );
 
             printf( "\x1b[2J" ); // clear the screen
             printf( "\x1b[1G" ); // cursor to top line

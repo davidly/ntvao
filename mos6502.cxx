@@ -15,13 +15,15 @@
 #include <djltrace.hxx>
 #include "mos6502.hxx"
 
-static bool g_traceInstructions = false;
-static bool g_endEmulation = false;
-static bool g_softReset = false;
+static uint32_t g_State = 0;
 
-void MOS_6502::trace_instructions( bool t ) { g_traceInstructions = t; }
-void MOS_6502::end_emulation() { g_endEmulation = true; }
-void MOS_6502::soft_reset() { g_softReset = true; }
+const DWORD stateTraceInstructions = 1;
+const DWORD stateEndEmulation = 2;
+const DWORD stateSoftReset = 4;
+
+void MOS_6502::trace_instructions( bool t ) { if ( t ) g_State |= stateTraceInstructions; else g_State &= ~stateTraceInstructions; }
+void MOS_6502::end_emulation() { g_State |= stateEndEmulation; }
+void MOS_6502::soft_reset() { g_State |= stateSoftReset; }
 
 uint8_t memory[ 65536 ];
 MOS_6502 cpu;
@@ -33,12 +35,12 @@ struct Instruction
     const char assembly[ 14 ];
 };
 
-// instructions with zeroes are not documented and not supported
+// instructions with zeroes are not documented and not supported. hook and halt are illegal, but used for emulation.
 
 static const Instruction ins_6502[ 256 ] =
 {
     /*00*/ 2,7,"brk",     2,6,"ora (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"ORA a8",    2,5,"asl a8",    0,0,"", 
-    /*08*/ 1,3,"php",     2,2,"ora #d8",    1,2,"asl a",   0,0,"", 0,0,"",          3,4,"ora a16",   3,6,"asl a16",   0,0,"(hook)", 
+    /*08*/ 1,3,"php",     2,2,"ora #d8",    1,2,"asl a",   0,0,"", 0,0,"",          3,4,"ora a16",   3,6,"asl a16",   1,1,"(hook)", 
     /*10*/ 2,3,"bpl r8",  2,5,"ora (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"ora a8,x",  2,6,"asl a8,x",  0,0,"", 
     /*18*/ 1,2,"clc",     3,4,"ora a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"ora a16,x", 3,7,"asl a16,x", 0,0,"", 
     /*20*/ 3,6,"jsr a16", 2,6,"and (a8,x)", 0,0,"",        0,0,"", 2,3,"bit a8",    2,3,"and a8",    2,5,"rol a8",    0,0,"", 
@@ -68,7 +70,7 @@ static const Instruction ins_6502[ 256 ] =
     /*e0*/ 2,2,"cpx #d8", 2,6,"sbc (a8,x)", 0,0,"",        0,0,"", 2,3,"cpx a8",    2,3,"sbc a8",    2,5,"inx a8",    0,0,"", 
     /*e8*/ 1,2,"inx",     2,2,"sbc #d8",    1,2,"nop",     0,0,"", 3,4,"cpx a16",   3,4,"sbc a16",   3,6,"inc a16",   0,0,"",
     /*f0*/ 2,3,"beq r8",  2,5,"sbc (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"sbc a8,x",  2,6,"inc a8,x",  0,0,"", 
-    /*f8*/ 1,2,"sed",     3,4,"sbc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"sbc a16,x", 3,7,"inc a16,x", 0,0,"(halt)", 
+    /*f8*/ 1,2,"sed",     3,4,"sbc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"sbc a16,x", 3,7,"inc a16,x", 1,1,"(halt)", 
 };
 
 uint16_t mword( uint16_t offset ) { return * ( (uint16_t * ) & memory[ offset ] ); }
@@ -86,7 +88,6 @@ const char * MOS_6502::render_operation( uint16_t address )
     static char ac[ 60 ] = {0};
     char actemp[ 60 ];
     strcpy( ac, ins_6502[ memory[ address ] ].assembly );
-
     char * pnum = 0;
     if ( pnum = strstr( ac, "8" ) )
     {
@@ -119,7 +120,6 @@ void MOS_6502::trace_state()
 uint8_t MOS_6502::op_rotate( uint8_t rotate, uint8_t val )
 {
     assert( rotate < 4 );
-
     if ( 0 == rotate )         // asl
     {
         fCarry = ( 0 != ( 0x80 & val ) );
@@ -182,8 +182,7 @@ void MOS_6502::op_bcd_math( uint8_t math, uint8_t rhs )
     uint8_t rlo = rhs & 0xf;
     uint8_t rhi = ( rhs >> 4 ) & 0xf;
 
-    //  check for badly-formed BCD numbers and don't do anything
-    if ( alo > 9 || ahi > 9 || rlo > 9 || rhi > 9 )
+    if ( alo > 9 || ahi > 9 || rlo > 9 || rhi > 9 ) // ignore if not already bcd
         return;
 
     uint8_t ad = ahi * 10 + alo;
@@ -277,33 +276,31 @@ void MOS_6502::op_pop_pf()
 uint64_t MOS_6502::emulate( uint64_t maxcycles )
 {
     uint64_t cycles = 0;
-    g_endEmulation = false;
 
     while ( cycles < maxcycles ) 
     {
-        // these 4 checks: end emulation, soft reset, trace, and hook are really expensive. 
-        if ( g_endEmulation )
-            break;
-        if ( g_softReset )
-        {
-            g_softReset = false;
-            pc = mword( 0xfffc );
-            continue;
-        }
-        if ( g_traceInstructions )
-            trace_state();
-
         uint8_t op = memory[ pc ];
-        if ( OPCODE_HOOK == op )
+
+        if ( 0 != g_State )   // grouped into one check rather than 3 every loop
         {
-            op = mos6502_invoke_hook();
-            if ( OPCODE_HALT == op ) // fake instruction returned by the hook
+            if ( g_State & stateTraceInstructions )
+                trace_state();
+
+            if ( g_State & stateEndEmulation )
             {
-                mos6502_invoke_halt();
-                goto all_done;
+                g_State &= ~stateEndEmulation;
+                break;
+            }
+
+            if ( g_State & stateSoftReset )
+            {
+                g_State &= ~stateSoftReset;
+                pc = mword( 0xfffc );
+                continue;
             }
         }
 
+_restart_op:
         uint16_t nextpc = pc + ins_6502[ op ].length; // default, but will change for jump/branch/return
         uint8_t cyc = ins_6502[ op ].cycles;
         if ( 0 == cyc )
@@ -331,6 +328,7 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                 push( pf );
                 break;
             }
+            case 0x0f: { op = mos6502_invoke_hook(); goto _restart_op; } // hook
             case 0x18: { fCarry = false; break; } // clc
             case 0x20: // jsr a16
             {
@@ -379,6 +377,7 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
             case 0xea: { break; } // nop
             case 0xec: { op_cmp( x, memory[ mword( pc + 1 ) ] ); break; } // cpx a16
             case 0xf8: { fDecimal = true; break; } // sed
+            case 0xff: { mos6502_invoke_halt(); goto _all_done; } // halt
             default: { handled = false; break; }
         }
 
@@ -594,6 +593,6 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
         pc = nextpc;
     }
 
-all_done:
+_all_done:
     return cycles;
 } //emulate
