@@ -808,7 +808,7 @@ int main( int argc, char * argv[] )
 
     if ( showPerformance )
     {
-        printf( "6502 cycles:   %18ws\n", perfApp.RenderLL( (LONGLONG) total_cycles ) );
+        printf( "\n6502 cycles:   %18ws\n", perfApp.RenderLL( (LONGLONG) total_cycles ) );
         printf( "clock rate: " );
         if ( 0 == clockrate )
         {

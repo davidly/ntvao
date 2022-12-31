@@ -302,14 +302,7 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
 
 _restart_op:
         uint16_t nextpc = pc + ins_6502[ op ].length; // default, but will change for jump/branch/return
-        uint8_t cyc = ins_6502[ op ].cycles;
-        if ( 0 == cyc )
-        {
-            tracer.Trace( "illegal insruction at address %04x: %02x", pc, op );
-            printf( "illegal insruction at address %04x: %02x", pc, op );
-            exit( 1 );
-        }
-        cycles += cyc;
+        cycles += ins_6502[ op ].cycles;
 
         bool handled = true;
         switch( op )  // switch on fixed opcodes to use a jump table
