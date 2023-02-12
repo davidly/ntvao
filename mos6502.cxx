@@ -6,6 +6,7 @@
 //           https://www.masswerk.at/6502/
 //           https://en.wikibooks.org/wiki/6502_Assembly#Absolute_Indexed_with_Y:_a.2Cy
 //           http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+//           https://onlinedisassembler.com/odaweb/
 // Tested with a handful of small apps and apps compiled with the BA BASIC compiler in my TTT repo.
 // 100% success (with ROM_vectors=0) with 6502_functional_test.a65 from https://github.com/Klaus2m5/6502_65C02_functional_tests
 // Success with that test means an infinite loop at address 0x347d (if you don't modify the sources).
@@ -283,9 +284,6 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
 
         if ( 0 != g_State )   // grouped into one check rather than 3 every loop
         {
-            if ( g_State & stateTraceInstructions )
-                trace_state();
-
             if ( g_State & stateEndEmulation )
             {
                 g_State &= ~stateEndEmulation;
@@ -298,6 +296,9 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                 pc = mword( 0xfffc );
                 continue;
             }
+
+            if ( g_State & stateTraceInstructions )
+                trace_state();
         }
 
 _restart_op:
