@@ -813,7 +813,15 @@ int main( int argc, char * argv[] )
         if ( 0 == clockrate )
         {
             printf( "      %15s\n", "unbounded" );
-            printf( "ms at 1.022727 Mhz: %13ws\n", perfApp.RenderLL( total_cycles * 1000 / 1022727 ) );
+            uint64_t total_ms = total_cycles * 1000 / 1022727;
+            printf( "ms at 1.022727 Mhz: %13ws == ", perfApp.RenderLL( total_ms ) );
+
+            uint16_t days = (uint16_t) ( total_ms / 1000 / 60 / 60 / 24 );
+            uint16_t hours = (uint16_t) ( ( total_ms % ( 1000 * 60 * 60 * 24 ) ) / 1000 / 60 / 60 );
+            uint16_t minutes = (uint16_t) ( ( total_ms % ( 1000 * 60 * 60 ) ) / 1000 / 60 );
+            uint16_t seconds = (uint16_t) ( ( total_ms % ( 1000 * 60 ) ) / 1000 );
+            uint64_t milliseconds = ( ( total_ms % 1000 ) );
+            printf( "%u days, %u hours, %u minutes, %u seconds, %llu milliseconds\n", days, hours, minutes, seconds, milliseconds );
         }
         else
             printf( "      %15ws Hz\n", perfApp.RenderLL( (LONGLONG ) clockrate ) );
