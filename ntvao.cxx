@@ -113,7 +113,10 @@ void CreateMemoryDump()
 {
     FILE * fp = fopen( "ntvao.dmp", "w" );
     if ( 0 == fp )
+    {
         tracer.Trace( "can't create memory dump file, error %d\n", errno );
+        return;
+    }
 
     uint64_t offset = 0;
     uint64_t length = 65536;
