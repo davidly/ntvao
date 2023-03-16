@@ -399,7 +399,7 @@ _restart_op:
                 {
                     cycles++;
                     uint16_t oldpc = pc;
-                    nextpc = pc + 2 + (int16_t) (char) memory[ pc + 1 ];
+                    nextpc = pc + 2 + (int16_t) (int8_t) memory[ pc + 1 ];
                     if ( ( oldpc & 0xff00 ) != ( pc & 0xff00 ) )
                         cycles++;
                 }
@@ -525,7 +525,11 @@ _restart_op:
                 else if ( 0x9d == op )                         // a16,x
                     address = mword( pc + 1 ) + x;             
                 else
-                    assert( !"unsupported store instruction" );
+                {
+                    printf( "mos6502 unsupported store instruction %02x\n", op );
+                    tracer.Trace( "mos6502 unsupported store instruction %02x\n", op );
+                    exit( 1 );
+                }
     
                 memory[ address ] = tostore;
 
@@ -578,8 +582,8 @@ _restart_op:
             }
             else
             {
-                printf( "unimplemented instruction opcode %02x\n", op );
-                tracer.Trace( "unimplemented instruction opcode %02x\n", op );
+                printf( "mos6502 unimplemented instruction opcode %02x\n", op );
+                tracer.Trace( "mos6502 unimplemented instruction opcode %02x\n", op );
                 exit( 1 );
             }
         }
