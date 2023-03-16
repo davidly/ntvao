@@ -1,7 +1,17 @@
 # ntvao
-NT Virtual Apple One
+NT Virtual Apple One. Apple 1 emulator for Windows and Linux.
 
 This app (like many others!) emulates an Apple 1. To invoke it in that mode, run ntvao with no arguments.
+
+Linux vs. Windows:
+
+    * The -s (clock speed) argument only works on Windows, not Linux. 
+    * 40x24 mode only works on Windows; on Linux the whole terminal window is used. 
+    * The emulator runs about 20% faster on Linux because the Gnu C++ compiler generates more efficient 
+      code than the Microsoft compiler. (But you can also build with the Gnu compiler on Windows to get
+      the performance there too.)
+
+Usage:
 
     usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] [.hex file>]
       arguments:
@@ -65,14 +75,11 @@ notes:
     
     The name is from ntvdm -- the Windows NT Virtual DOS Machine.
     
-    The -p switch will show runtime information. In this example, the app took 22 seconds to run, 
+    The -p switch shows runtime information. In this example, the app took 21 seconds to run, 
     but on a real Apple 1 it would have taken three and a half hours.
     
-        6502 cycles:       12,637,172,572
-        clock rate:             unbounded
-        ms at 1.022727 Mhz:    12,356,349
-        kernel CPU ms:                 15
-        user CPU ms:               22,359
-        total CPU ms:              22,375
-        elapsed ms:                22,432
+    elapsed milliseconds:           20,556
+    6502 cycles:            12,637,173,761
+    clock rate:                  unbounded
+    ms at 1.022727 Mhz:         12,356,350 == 0 days, 3 hours, 25 minutes, 56 seconds, 350 milliseconds
  
