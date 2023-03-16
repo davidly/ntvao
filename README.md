@@ -1,7 +1,9 @@
 # ntvao
-NT Virtual Apple One
+NT Virtual Apple One. Apple 1 emulator for Windows and Linux.
 
 This app (like many others!) emulates an Apple 1. To invoke it in that mode, run ntvao with no arguments.
+
+The -s argument only works on Windows, not Linux.
 
     usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] [.hex file>]
       arguments:
