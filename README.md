@@ -48,6 +48,7 @@ file descriptions:
     ntvao.cxx:        loads the 6502 emulator and drives the app
     mos6502.cxx:      the 6502 emulator with a few additions to enable Apple 1 emulation
     m.bat:            builds ntvao.exe using a Visual Studio vcvars64.bat environment
+    m.sh:             builds ntvao on Linux
     6502_functional_test.hex: test suite for the 6502 from Klaus Dormann: https://github.com/Klaus2m5/6502_65C02_functional_tests
     run_fun_test.bat: invokes ntvao with the test suite for validation
     ttta1.bas:        Apple 1 BASIC app to prove you can't win a Nuclear War per War Games
