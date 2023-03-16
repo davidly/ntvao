@@ -11,14 +11,28 @@
 #define UNICODE
 
 #include <stdio.h>
-#include <conio.h>
 #include <vector>
+#include <chrono>
 
-#include <windows.h>
-#include <djltrace.hxx>
-#include <djl_con.hxx>
-#include <djl_perf.hxx>
-#include <djl_cycle.hxx>
+#ifdef _MSC_VER
+    #include <conio.h>
+    #include <windows.h>
+    #include <djltrace.hxx>
+    #include <djl_cycle.hxx>
+    #include <djl_con.hxx>
+#else
+    #include <unistd.h>
+    #include <sys/select.h>
+    #include <termios.h>
+    #include <time.h>
+    template < typename T, size_t N > size_t _countof( T ( & arr )[ N ] ) { return std::extent< T[ N ] >::value; }    
+    #define _stricmp strcasecmp
+    #define MAX_PATH 1024
+    #include <djltrace.hxx>
+#endif
+
+using namespace std;
+using namespace std::chrono;
 
 #include "mos6502.hxx"
 
@@ -31,6 +45,20 @@ static bool g_fStartAddressSpecified = false;
 static bool g_useHooks = false;
 static bool g_use40x24 = true;
 
+template <class T> T get_max( T a, T b )
+{
+    if ( a > b )
+        return a;
+    return b;
+}
+
+template <class T> T get_min( T a, T b )
+{
+    if ( a < b )
+        return a;
+    return b;
+}
+
 void usage( char const * perr = 0 )
 {
     if ( perr )
@@ -40,8 +68,12 @@ void usage( char const * perr = 0 )
     printf( "usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] [.hex file>]\n" );
     printf( "  arguments:\n" );
     printf( "     -a     address at which the run is started, e.g. /a:0x1000\n" );
-    printf( "            this overrides the default, which is 0xff00 or the first address in the input file.\n" ); 
+    printf( "            this overrides the default, which is 0xff00 or the first address in the input file.\n" );
+#ifdef _MSC_VER
     printf( "     -c     don't set the console to 40x24. do exit ntvao when the Apple 1 app completes.\n" );
+#else
+    printf( "     -c     Exit ntvao when the Apple 1 app completes.\n" );
+#endif
     printf( "     -h     don't automatically install the Apple 1 monitor and BASIC; use hook emulation instead.\n" );
     printf( "     -i     when tracing is enabled with -t, also show each instruction executed.\n" );
     printf( "     -p     show performance information at app exit.\n" ); 
@@ -67,12 +99,112 @@ void usage( char const * perr = 0 )
     exit( -1 );
 } //usage
 
-void DumpBinaryData( byte * pData, DWORD length, DWORD indent )
+#ifdef _MSC_VER
+
+    void output_char( char ch )
+    {
+        printf( "%c", ch );
+    } //output_char
+
+#else
+
+    struct termios orig_termios;
+
+    void reset_terminal_mode()
+    {
+        tcsetattr( 0, TCSANOW, &orig_termios );
+    }
+
+    void set_conio_terminal_mode()
+    {
+        struct termios new_termios;
+
+        tcgetattr( 0, &orig_termios );
+        memcpy( &new_termios, &orig_termios, sizeof( new_termios ) );
+
+        atexit( reset_terminal_mode );
+        cfmakeraw( &new_termios );
+        tcsetattr( 0, TCSANOW, &new_termios );
+    } //set_conio_terminal_mode
+
+    int _kbhit()
+    {
+        struct timeval tv = { 0L, 0L };
+        fd_set fds;
+        FD_ZERO( &fds );
+        FD_SET( 0, &fds );
+        return ( select( 1, &fds, NULL, NULL, &tv ) > 0 );
+    }
+
+    int _getch()
+    {
+        int r;
+        unsigned char c;
+
+        if ( ( r = read( 0, &c, sizeof( c ) ) ) < 0 )
+            return r;
+
+        return c;
+    } // _getch
+
+    void output_char( char ch )
+    {
+        if ( 0xa == ch )
+            printf( "%c", 0xd );
+        
+        printf( "%c", ch );
+        fflush( stdout );
+    } //output_char
+
+    char * gets_s(  char * buf, size_t bufsize )
+    {
+        // getline (hangs, no echo)
+        // fscanf (works, no echo )
+        // fgets (hangs, no echo)
+
+        size_t len = 0;
+        do
+        {
+            char ch = _getch();
+            if ( '\n' == ch || '\r' == ch )
+            {
+                output_char ( 0xa );
+                break;
+            }
+
+            if ( len >= ( bufsize - 1 ) )                
+                break;
+
+            if ( 0x7f == ch || 8 == ch ) // backspace (it's not 8 for some reason)
+            {
+                if ( len > 0 )
+                {
+                    output_char( 8 );
+                    output_char( ' ' );
+                    output_char( 8 );
+                    len--;
+                }
+            }
+            else
+            {
+                output_char( ch );
+                buf[ len++ ] = ch;
+            }
+        } while( true );
+
+        buf[ len ] = 0;
+        return buf;
+    
+    }
+
+#endif
+
+void DumpBinaryData( uint8_t * pData, uint32_t length, uint32_t indent )
 {
     uint64_t offset = 0;
     uint64_t beyond = length;
     const uint64_t bytesPerRow = 32;
-    byte buf[ bytesPerRow ];
+    uint8_t buf[ bytesPerRow ];
 
     while ( offset < beyond )
     {
@@ -81,7 +213,7 @@ void DumpBinaryData( byte * pData, DWORD length, DWORD indent )
 
         tracer.TraceQuiet( "%#10llx  ", offset );
 
-        uint64_t cap = __min( offset + bytesPerRow, beyond );
+        uint64_t cap = get_min( offset + bytesPerRow, beyond );
         uint64_t toread = ( ( offset + bytesPerRow ) > beyond ) ? ( length % bytesPerRow ) : bytesPerRow;
 
         memcpy( buf, pData + offset, toread );
@@ -89,9 +221,9 @@ void DumpBinaryData( byte * pData, DWORD length, DWORD indent )
         for ( uint64_t o = offset; o < cap; o++ )
             tracer.TraceQuiet( "%02x ", buf[ o - offset ] );
 
-        DWORD spaceNeeded = ( bytesPerRow - ( cap - offset ) ) * 3;
+        uint32_t spaceNeeded = ( bytesPerRow - ( cap - offset ) ) * 3;
 
-        for ( ULONG sp = 0; sp < ( 1 + spaceNeeded ); sp++ )
+        for ( uint32_t sp = 0; sp < ( 1 + spaceNeeded ); sp++ )
             tracer.TraceQuiet( " " );
 
         for ( uint64_t o = offset; o < cap; o++ )
@@ -160,11 +292,13 @@ uint8_t mos6502_invoke_hook( void )
     else if ( 0xffef == address ) // apple 1
     {
         char c = cpu.a;
+#ifdef _MSC_VER        
         if ( 0x0d != c )
+#endif        
         {
             if ( g_forceUppercase )
                 c = toupper( c );
-            putchar( c );
+            output_char( c );
         }
 
         return 0x60; // rts
@@ -174,7 +308,8 @@ uint8_t mos6502_invoke_hook( void )
         // On the Apple 1 this emits a CR then returns to the monitor
         // Here the app is just terminated
 
-        printf( "\n" );
+        output_char( '\n' );
+
         g_executionEnded = true;
         cpu.end_emulation();
         return 0;
@@ -189,6 +324,7 @@ static uint32_t g_inputOffset = 0;
 void LoadInputFile()
 {
     printf( "filename to read: " );
+    fflush( stdout );
     char acfilename[ MAX_PATH ];
     char * result = gets_s( acfilename, _countof( acfilename ) );
     if ( result )
@@ -198,15 +334,20 @@ void LoadInputFile()
         if ( fp )
         {
             uint32_t sizeSoFar = 0;
+            int prev = 0;
             do
             {
                 int next = fgetc( fp );
                 if ( EOF == next )
                     break;
 
-                if ( 0x0a == next ) // the Apple 1 uses 0x0d; Windows uses 0x0a.
-                    next = 0x0d;
+                if ( 0xa == next ) // the Apple 1 uses 0x0d; Windows uses 0x0a.
+                    next = 0xd;
 
+                if ( 0xd == next && prev == 0xd )
+                    continue;
+
+                prev = next;
                 g_inputText.resize( sizeSoFar + 1 );
                 g_inputText[ sizeSoFar ] = (char) next;
                 sizeSoFar++;
@@ -215,7 +356,10 @@ void LoadInputFile()
             fclose( fp );
         }
         else
-            printf( "failed to open the file, error %d\n", errno );
+        {
+            printf( "failed to open the file, error %d", errno );
+            output_char( 0xa ); // so linux and Windows can each do their thing
+        }
     }
 } //LoadInputFile
 
@@ -238,10 +382,14 @@ uint8_t mos6502_apple1_load( uint16_t address )
             // 1..26 are ^a through ^z. ^c isn't sent through _getch. pass through carriage returns and backspace
 
             char ch = _getch();
-            if ( ch < 26 && 0x08 != ch && 0x0d != ch )
+#ifndef _MSC_VER
+            if ( 0xa == ch )
+                ch = 0xd;
+#endif
+
+            if ( ch < 26 && 0x08 != ch && 0x0d != ch && 0x7f != ch )
             {
                 // ^ character processing...
-                tracer.Trace( "control character: %d\n", ch );
 
                 if ( 17 == ch ) // 'q' for quit
                 {
@@ -264,15 +412,26 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
             // translate backspace to what the Apple 1 wants -- an undercore, which virtually backspaces
 
-            if ( 0x08 == ch )
+            if ( 0x08 == ch || 0x7f == ch )
                 ch = 0x5f;
 
-            _ungetch( ch ); // put the character back in the buffer
+            // put the character in the buffer to be read later
+
+            g_inputText.resize( 1 );
+            g_inputText[ 0 ] = ch;
+            g_inputOffset = 0;
             return 0x80;    // a key is available
         }
         else
         {
+#ifdef _MSC_VER            
             SleepEx( 1, FALSE ); // prevent a tight busy loop
+#else
+            struct timespec ts;
+            ts.tv_sec = 0;
+            ts.tv_nsec = 10000000; // 10ms.  ms * 10^6 == ns.
+            nanosleep( &ts, 0 );            
+#endif            
             return 0; // high bit off, no key available
         }
     }
@@ -324,7 +483,7 @@ void mos6502_apple1_store( uint16_t address )
             if ( 0x0d == ch )
                 ch = 0x0a;
 
-            printf( "%c", ch );
+            output_char( ch );
         }
         memory[ 0xd012 ] = 0;  // Indicate that the character has been consumed
     }
@@ -559,7 +718,7 @@ bool load_file_intel_format( FILE * fp )
 
 static bool load_file( char const * file_path )
 {               
-    bool ok = FALSE;
+    bool ok = false;
     FILE *fp = fopen( file_path, "r" );
     char acLine[ 120 ];
     bool first_address = true;
@@ -661,13 +820,15 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
     }
 
     g_executionEnded = false;
-    ULONGLONG cycles_executed = 0;
+    uint64_t cycles_executed = 0;
+#ifdef _MSC_VER    
     CPUCycleDelay delay( clockrate );
-    ULONGLONG cycles_since_last_kbd_peek = 0;
+#endif    
+    uint64_t cycles_since_last_kbd_peek = 0;
 
     do
     {
-        ULONGLONG cycles_this_run = cpu.emulate( 1000 );
+        uint64_t cycles_this_run = cpu.emulate( 1000 );
         cycles_executed += cycles_this_run;
         cycles_since_last_kbd_peek += cycles_this_run;
 
@@ -678,17 +839,23 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         {
             // peeking the keyboard sleeps, throwing off execution times. Start again.
 
+#ifdef _MSC_VER
             delay.Reset();
+#endif            
             cycles_since_last_kbd_peek = 0;
             g_KbdPeekHappened = false;
             continue;
         }
 
+#ifdef _MSC_VER        
         delay.Delay( cycles_since_last_kbd_peek );
+#endif        
     } while ( true );
 
     return cycles_executed;
 } //invoke_command
+
+#ifdef _MSC_VER
 
 BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
 {
@@ -701,6 +868,46 @@ BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
 
     return FALSE;
 } //ControlHandler
+
+#endif
+
+static void Render( long long n, char * ac )
+{
+    if ( n < 0 )
+    {
+        strcat( ac, "-" );
+        Render( -n, ac );
+        return;
+    }
+   
+    if ( n < 1000 )
+    {
+        sprintf( ac + strlen( ac ), "%lld", n );
+        return;
+    }
+
+    Render( n / 1000, ac );
+    sprintf( ac + strlen( ac ), ",%03lld", n % 1000 );
+    return;
+} //RenderNumberWithCommas
+
+static char * RenderNumberWithCommas( long long n, char * ac )
+{
+    ac[ 0 ] = 0;
+    Render( n, ac );
+    return ac;
+} //RenderNumberWithCommas
+
+int ends_with( const char * str, const char * end )
+{
+    size_t len = strlen( str );
+    size_t lenend = strlen( end );
+
+    if ( len < lenend )
+        return false;
+
+    return ( 0 == _stricmp( str + len - lenend, end ) );
+} //ends_with
 
 int main( int argc, char * argv[] )
 {
@@ -732,7 +939,7 @@ int main( int argc, char * argv[] )
             else if ( 's' == ca )
             {
                 if ( ':' == parg[2] )
-                    clockrate = (uint64_t) _strtoui64( parg + 3 , 0, 10 );
+                    clockrate = (uint64_t) strtoull( parg + 3 , 0, 10 );
                 else
                     usage( "colon required after c argument" );
             }
@@ -764,27 +971,31 @@ int main( int argc, char * argv[] )
 
     tracer.Enable( trace, L"ntvao.log", true );
     tracer.SetQuiet( true );
-    tracer.SetFlushEachTrace( false );
+    tracer.SetFlushEachTrace( true );
     cpu.trace_instructions( traceInstructions );
 
     if ( 0 == pcHEX && g_useHooks )
         usage( "no command specified and hooks mean no Apple 1 monitor is installed" );
 
-    char acHEX[ MAX_PATH ] = {0};
+    char acHex[ MAX_PATH ] = {0};
     if ( 0 != pcHEX )
     {
-        strcpy( acHEX, pcHEX );
-        strupr( acHEX );
-        DWORD attr = GetFileAttributesA( acHEX );
-        if ( INVALID_FILE_ATTRIBUTES == attr )
+        strcpy( acHex, pcHEX );
+
+        FILE * fp = fopen( acHex, "r" );
+        if ( fp )
+            fclose( fp );
+        else
         {
-            if ( strstr( acHEX, ".HEX" ) )
+            if ( ends_with( acHex, ".hex" ) )
                 usage( "can't find command file" );
             else
             {
-                strcat( acHEX, ".HEX" );
-                attr = GetFileAttributesA( acHEX );
-                if ( INVALID_FILE_ATTRIBUTES == attr )
+                strcat( acHex, ".hex" );
+                FILE * fp = fopen( acHex, "r" );
+                if ( fp )
+                    fclose( fp );
+                else
                     usage( "can't find command file" );
             }
         }
@@ -793,31 +1004,39 @@ int main( int argc, char * argv[] )
     memset( &cpu, 0, sizeof( cpu ) );
     memset( memory, 0, sizeof( memory ) );
 
+#ifdef _MSC_VER
     ConsoleConfiguration consoleConfig;
     if ( g_use40x24 )
         consoleConfig.EstablishConsole( 40, 24, ControlHandler );
+#else
+    set_conio_terminal_mode();
+#endif
 
-    CPerfTime perfApp;
+    high_resolution_clock::time_point tStart = high_resolution_clock::now();
 
-    uint64_t total_cycles = invoke_command( ( 0 != acHEX[ 0 ] ) ? acHEX : 0, clockrate );
+    uint64_t total_cycles = invoke_command( ( 0 != acHex[ 0 ] ) ? acHex : 0, clockrate );
 
-    LONGLONG elapsed = 0;
-    perfApp.CumulateSince( elapsed );
-    FILETIME creationFT, exitFT, kernelFT, userFT;
-    GetProcessTimes( GetCurrentProcess(), &creationFT, &exitFT, &kernelFT, &userFT );
+#ifdef _MSC_VER
+    consoleConfig.RestoreConsole();
+#else
+    reset_terminal_mode();    
+#endif
 
-    if ( g_use40x24 )
-        consoleConfig.RestoreConsole();
-
+    printf( "\n" );
     if ( showPerformance )
     {
-        printf( "\n6502 cycles:   %18ws\n", perfApp.RenderLL( (LONGLONG) total_cycles ) );
+        high_resolution_clock::time_point tDone = high_resolution_clock::now();
+        long long totalTime = duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
+
+        char ac[ 100 ];
+        printf( "elapsed milliseconds: %14s\n", RenderNumberWithCommas( totalTime, ac ) );
+        printf( "6502 cycles: %23s\n", RenderNumberWithCommas( total_cycles, ac ) );
         printf( "clock rate: " );
         if ( 0 == clockrate )
         {
-            printf( "      %15s\n", "unbounded" );
+            printf( "      %18s\n", "unbounded" );
             uint64_t total_ms = total_cycles * 1000 / 1022727;
-            printf( "ms at 1.022727 Mhz: %13ws == ", perfApp.RenderLL( total_ms ) );
+            printf( "ms at 1.022727 Mhz: %16s == ", RenderNumberWithCommas( total_ms, ac ) );
 
             uint16_t days = (uint16_t) ( total_ms / 1000 / 60 / 60 / 24 );
             uint16_t hours = (uint16_t) ( ( total_ms % ( 1000 * 60 * 60 * 24 ) ) / 1000 / 60 / 60 );
@@ -827,19 +1046,7 @@ int main( int argc, char * argv[] )
             printf( "%u days, %u hours, %u minutes, %u seconds, %llu milliseconds\n", days, hours, minutes, seconds, milliseconds );
         }
         else
-            printf( "      %15ws Hz\n", perfApp.RenderLL( (LONGLONG ) clockrate ) );
-
-        ULARGE_INTEGER ullK, ullU;
-        ullK.HighPart = kernelFT.dwHighDateTime;
-        ullK.LowPart = kernelFT.dwLowDateTime;
-    
-        ullU.HighPart = userFT.dwHighDateTime;
-        ullU.LowPart = userFT.dwLowDateTime;
-    
-        printf( "kernel CPU ms:    %15ws\n", perfApp.RenderDurationInMS( ullK.QuadPart ) );
-        printf( "user CPU ms:      %15ws\n", perfApp.RenderDurationInMS( ullU.QuadPart ) );
-        printf( "total CPU ms:     %15ws\n", perfApp.RenderDurationInMS( ullU.QuadPart + ullK.QuadPart ) );
-        printf( "elapsed ms:       %15ws\n", perfApp.RenderDurationInMS( elapsed ) );
+            printf( "      %18s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
     }
 
     tracer.Shutdown();

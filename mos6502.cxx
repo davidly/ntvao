@@ -18,9 +18,9 @@
 
 static uint32_t g_State = 0;
 
-const DWORD stateTraceInstructions = 1;
-const DWORD stateEndEmulation = 2;
-const DWORD stateSoftReset = 4;
+const uint32_t stateTraceInstructions = 1;
+const uint32_t stateEndEmulation = 2;
+const uint32_t stateSoftReset = 4;
 
 void MOS_6502::trace_instructions( bool t ) { if ( t ) g_State |= stateTraceInstructions; else g_State &= ~stateTraceInstructions; }
 void MOS_6502::end_emulation() { g_State |= stateEndEmulation; }
