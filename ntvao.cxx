@@ -1029,14 +1029,14 @@ int main( int argc, char * argv[] )
         long long totalTime = duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
 
         char ac[ 100 ];
-        printf( "elapsed milliseconds: %14s\n", RenderNumberWithCommas( totalTime, ac ) );
-        printf( "6502 cycles: %23s\n", RenderNumberWithCommas( total_cycles, ac ) );
+        printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( totalTime, ac ) );
+        printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
         printf( "clock rate: " );
         if ( 0 == clockrate )
         {
-            printf( "      %18s\n", "unbounded" );
+            printf( "      %20s\n", "unbounded" );
             uint64_t total_ms = total_cycles * 1000 / 1022727;
-            printf( "ms at 1.022727 Mhz: %16s == ", RenderNumberWithCommas( total_ms, ac ) );
+            printf( "ms at 1.022727 Mhz: %18s == ", RenderNumberWithCommas( total_ms, ac ) );
 
             uint16_t days = (uint16_t) ( total_ms / 1000 / 60 / 60 / 24 );
             uint16_t hours = (uint16_t) ( ( total_ms % ( 1000 * 60 * 60 * 24 ) ) / 1000 / 60 / 60 );
@@ -1046,7 +1046,7 @@ int main( int argc, char * argv[] )
             printf( "%u days, %u hours, %u minutes, %u seconds, %llu milliseconds\n", days, hours, minutes, seconds, milliseconds );
         }
         else
-            printf( "      %18s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
+            printf( "      %20s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
     }
 
     tracer.Shutdown();
