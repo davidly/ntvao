@@ -12,27 +12,28 @@
 
 #include <stdio.h>
 #include <vector>
+#include <time.h>
 #include <chrono>
 
 #ifdef _MSC_VER
-    #include <conio.h>
     #include <windows.h>
-    #include <djltrace.hxx>
-    #include <djl_cycle.hxx>
-    #include <djl_con.hxx>
 #else
-    #include <unistd.h>
-    #include <sys/select.h>
     #include <termios.h>
-    #include <time.h>
     template < typename T, size_t N > size_t _countof( T ( & arr )[ N ] ) { return std::extent< T[ N ] >::value; }    
     #define _stricmp strcasecmp
     #define MAX_PATH 1024
-    #include <djltrace.hxx>
 #endif
 
 using namespace std;
 using namespace std::chrono;
+
+#include <djltrace.hxx>
+#include <djl_cycle.hxx>
+
+#ifdef _MSC_VER
+    #include <conio.h>
+    #include <djl_con.hxx>
+#endif
 
 #include "mos6502.hxx"
 
@@ -427,9 +428,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
 #ifdef _MSC_VER            
             SleepEx( 1, FALSE ); // prevent a tight busy loop
 #else
-            struct timespec ts;
-            ts.tv_sec = 0;
-            ts.tv_nsec = 10000000; // 10ms.  ms * 10^6 == ns.
+            struct timespec ts = { 0, 1000000 };
             nanosleep( &ts, 0 );            
 #endif            
             return 0; // high bit off, no key available
@@ -821,9 +820,7 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
 
     g_executionEnded = false;
     uint64_t cycles_executed = 0;
-#ifdef _MSC_VER    
     CPUCycleDelay delay( clockrate );
-#endif    
     uint64_t cycles_since_last_kbd_peek = 0;
 
     do
@@ -839,17 +836,13 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         {
             // peeking the keyboard sleeps, throwing off execution times. Start again.
 
-#ifdef _MSC_VER
             delay.Reset();
-#endif            
             cycles_since_last_kbd_peek = 0;
             g_KbdPeekHappened = false;
             continue;
         }
 
-#ifdef _MSC_VER        
         delay.Delay( cycles_since_last_kbd_peek );
-#endif        
     } while ( true );
 
     return cycles_executed;
