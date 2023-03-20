@@ -5,7 +5,6 @@ This app (like many others!) emulates an Apple 1. To invoke it in that mode, run
 
 Linux vs. Windows:
 
-    * The -s (clock speed) argument only works on Windows, not Linux. 
     * 40x24 mode only works on Windows; on Linux the whole terminal window is used. 
     * The emulator runs about 20% faster on Linux because the Gnu C++ compiler generates more efficient 
       code than the Microsoft compiler. (But you can also build with the Gnu compiler on Windows to get
