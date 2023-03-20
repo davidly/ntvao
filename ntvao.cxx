@@ -864,12 +864,12 @@ BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
 
 #endif
 
-static void Render( long long n, char * ac )
+static void RenderNumber( long long n, char * ac )
 {
     if ( n < 0 )
     {
         strcat( ac, "-" );
-        Render( -n, ac );
+        RenderNumber( -n, ac );
         return;
     }
    
@@ -879,15 +879,15 @@ static void Render( long long n, char * ac )
         return;
     }
 
-    Render( n / 1000, ac );
+    RenderNumber( n / 1000, ac );
     sprintf( ac + strlen( ac ), ",%03lld", n % 1000 );
     return;
-} //RenderNumberWithCommas
+} //RenderNumber
 
 static char * RenderNumberWithCommas( long long n, char * ac )
 {
     ac[ 0 ] = 0;
-    Render( n, ac );
+    RenderNumber( n, ac );
     return ac;
 } //RenderNumberWithCommas
 
@@ -1006,7 +1006,6 @@ int main( int argc, char * argv[] )
 #endif
 
     high_resolution_clock::time_point tStart = high_resolution_clock::now();
-
     uint64_t total_cycles = invoke_command( ( 0 != acHex[ 0 ] ) ? acHex : 0, clockrate );
 
 #ifdef _MSC_VER
