@@ -200,48 +200,6 @@ void usage( char const * perr = 0 )
 
 #endif
 
-void DumpBinaryData( uint8_t * pData, uint32_t length, uint32_t indent )
-{
-    uint64_t offset = 0;
-    uint64_t beyond = length;
-    const uint64_t bytesPerRow = 32;
-    uint8_t buf[ bytesPerRow ];
-
-    while ( offset < beyond )
-    {
-        for ( int i = 0; i < indent; i++ )
-            tracer.TraceQuiet( " " );
-
-        tracer.TraceQuiet( "%#10llx  ", offset );
-
-        uint64_t cap = get_min( offset + bytesPerRow, beyond );
-        uint64_t toread = ( ( offset + bytesPerRow ) > beyond ) ? ( length % bytesPerRow ) : bytesPerRow;
-
-        memcpy( buf, pData + offset, toread );
-
-        for ( uint64_t o = offset; o < cap; o++ )
-            tracer.TraceQuiet( "%02x ", buf[ o - offset ] );
-
-        uint32_t spaceNeeded = ( bytesPerRow - ( cap - offset ) ) * 3;
-
-        for ( uint32_t sp = 0; sp < ( 1 + spaceNeeded ); sp++ )
-            tracer.TraceQuiet( " " );
-
-        for ( uint64_t o = offset; o < cap; o++ )
-        {
-            char ch = buf[ o - offset ];
-
-            if ( ch < ' ' || 127 == ch )
-                ch = '.';
-            tracer.TraceQuiet( "%c", ch );
-        }
-
-        offset += bytesPerRow;
-
-        tracer.TraceQuiet( "\n" );
-    }
-} //DumpBinaryData
-
 void CreateMemoryDump()
 {
     FILE * fp = fopen( "ntvao.dmp", "w" );
@@ -702,7 +660,7 @@ bool load_file_intel_format( FILE * fp )
 
     fclose( fp );
 
-    //DumpBinaryData( memory + 0x400, 0x100, 2 );
+    //tracer.TraceBinaryData( memory + 0x400, 0x100, 2 );
     return true;
 } //load_file_intel_format
 
@@ -770,7 +728,7 @@ static bool load_file( char const * file_path )
 
         fclose( fp );
 
-        DumpBinaryData( memory + initial_address, 0x100, 2 );
+        tracer.TraceBinaryData( memory + initial_address, 0x100, 2 );
     }
 
     return ok;
