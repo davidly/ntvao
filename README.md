@@ -7,7 +7,7 @@ Linux vs. Windows:
 
     * 40x24 mode only works on Windows; on Linux the whole terminal window is used. 
     * The emulator runs about 20% faster on Linux because the Gnu C++ compiler generates more efficient 
-      code than the Microsoft compiler. (But you can also build with the Gnu compiler on Windows to get
+      code than the Microsoft compiler. (But you can  build with the Gnu compiler on Windows to get
       the performance there too.)
 
 Usage:
@@ -32,7 +32,7 @@ Usage:
          --     any 6502 app will run but with no OS support it can be hard to tell.
          --     when using -c, ntvao will exit when the app calls 0xff1f instead of starting the monitor
          --     control keys:
-                    ^c        gracefully exit the ntvao
+                    ^c        gracefully exit ntvao
                     ^d        save a 64k memory dump in ntvao.dmp
                     ^l        load a file into the keyboard input stream. This is
                               likely an Apple 1 format .hex for monitor or .bas for BASIC
@@ -46,8 +46,9 @@ file descriptions:
     wozmon.hex:       just the Apple 1 Monitor without BASIC. Found all over the web; I didn't author this.
     ntvao.cxx:        loads the 6502 emulator and drives the app
     mos6502.cxx:      the 6502 emulator with a few additions to enable Apple 1 emulation
-    m.bat:            builds ntvao.exe using a Visual Studio vcvars64.bat environment
-    m.sh:             builds ntvao on Linux
+    m.bat:            builds ntvao.exe using a Visual Studio vcvars64.bat environment. mr.bat for release.
+    mg.bat            builds using mingw64 g++. mgr.bat for release.
+    m.sh:             builds ntvao on Linux. mr.sh for release.
     6502_functional_test.hex: test suite for the 6502 from Klaus Dormann: https://github.com/Klaus2m5/6502_65C02_functional_tests
     run_fun_test.bat: invokes ntvao with the test suite for validation
     ttta1.bas:        Apple 1 BASIC app to prove you can't win a Nuclear War per War Games
