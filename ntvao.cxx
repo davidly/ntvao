@@ -1,39 +1,36 @@
 // NT Virtual Apple One
 // Written by David Lee
+//
+// To build on Windows debug or release:
+//    cl /nologo ntvao.cxx mos6502.cxx /MT /Ot /Ox /Ob2 /Oi /Qpar /O2 /EHac /Zi /DDEBUG /D_AMD64_ /link ntdll.lib user32.lib /OPT:REF
+//    cl /nologo ntvao.cxx mos6502.cxx /MT /Ot /Ox /Ob2 /Oi /Qpar /O2 /EHac /Zi /DNDEBUG /D_AMD64_ /link ntdll.lib user32.lib /OPT:REF
+// To build on Linux debug or release:
+//    g++ -ggdb -Ofast -fno-builtin -D DEBUG -I . ntvao.cxx mos6502.cxx -o ntvao
+//    g++ -ggdb -Ofast -fno-builtin -D NDEBUG -I . ntvao.cxx mos6502.cxx -o ntvao
+// To build on Windows debug or release using Mingw64 g++: (the code is >10% faster than Microsoft's compiler)
+//    g++ ntvao.cxx mos6502.cxx -I ../djl -D DEBUG -D _MSC_VER -D _GNU_WIN -Ofast -o ntvao.exe
+//    g++ ntvao.cxx mos6502.cxx -I ../djl -D NDEBUG -D _MSC_VER -D _GNU_WIN -Ofast -o ntvao.exe
+//
 // Simulates the Apple 1 runtime environment enough to run simple apps.
 // Uses the mos6502 emulator for the CPU
 // Hooks are installed to emulate the Apple 1's keyboard and display functionality.
 // If the monitor is loaded, it overwrites those hooks with the real code.
 // Useful:  https://www.sbprojects.net/projects/apple1/wozmon.php
 //          http://s3data.computerhistory.org/brochures/apple.applei.1976.102646518.pdf
+// The fflush(stdout) calls after every printf are for Linux, which doesn't flush regularly
 //
-
-#define UNICODE
 
 #include <stdio.h>
 #include <vector>
 #include <time.h>
+#include <string.h>
 #include <chrono>
+#include <cstring>
 
-#ifdef _MSC_VER
-    #include <windows.h>
-#else
-    #include <termios.h>
-    template < typename T, size_t N > size_t _countof( T ( & arr )[ N ] ) { return std::extent< T[ N ] >::value; }    
-    #define _stricmp strcasecmp
-    #define MAX_PATH 1024
-#endif
-
-using namespace std;
-using namespace std::chrono;
-
+#include <djl_os.hxx>
 #include <djltrace.hxx>
 #include <djl_cycle.hxx>
-
-#ifdef _MSC_VER
-    #include <conio.h>
-    #include <djl_con.hxx>
-#endif
+#include <djl_con.hxx>
 
 #include "mos6502.hxx"
 
@@ -46,26 +43,12 @@ static bool g_fStartAddressSpecified = false;
 static bool g_useHooks = false;
 static bool g_use40x24 = true;
 
-template <class T> T get_max( T a, T b )
-{
-    if ( a > b )
-        return a;
-    return b;
-}
-
-template <class T> T get_min( T a, T b )
-{
-    if ( a < b )
-        return a;
-    return b;
-}
-
-void usage( char const * perr = 0 )
+static void usage( char const * perr = 0 )
 {
     if ( perr )
         printf( "error: %s\n", perr );
 
-    printf( "NT Virtual Apple 1 Machine: emulates an Apple 1 on Windows\n" );
+    printf( "NT Virtual Apple 1 Machine: emulates an Apple 1 on Windows and Linux\n" );
     printf( "usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] [.hex file>]\n" );
     printf( "  arguments:\n" );
     printf( "     -a     address at which the run is started, e.g. /a:0x1000\n" );
@@ -100,107 +83,7 @@ void usage( char const * perr = 0 )
     exit( -1 );
 } //usage
 
-#ifdef _MSC_VER
-
-    void output_char( char ch )
-    {
-        printf( "%c", ch );
-    } //output_char
-
-#else
-
-    struct termios orig_termios;
-
-    void reset_terminal_mode()
-    {
-        tcsetattr( 0, TCSANOW, &orig_termios );
-    }
-
-    void set_conio_terminal_mode()
-    {
-        struct termios new_termios;
-
-        tcgetattr( 0, &orig_termios );
-        memcpy( &new_termios, &orig_termios, sizeof( new_termios ) );
-
-        atexit( reset_terminal_mode );
-        cfmakeraw( &new_termios );
-        tcsetattr( 0, TCSANOW, &new_termios );
-    } //set_conio_terminal_mode
-
-    int _kbhit()
-    {
-        struct timeval tv = { 0L, 0L };
-        fd_set fds;
-        FD_ZERO( &fds );
-        FD_SET( 0, &fds );
-        return ( select( 1, &fds, NULL, NULL, &tv ) > 0 );
-    }
-
-    int _getch()
-    {
-        int r;
-        unsigned char c;
-
-        if ( ( r = read( 0, &c, sizeof( c ) ) ) < 0 )
-            return r;
-
-        return c;
-    } // _getch
-
-    void output_char( char ch )
-    {
-        if ( 0xa == ch )
-            printf( "%c", 0xd );
-        
-        printf( "%c", ch );
-        fflush( stdout );
-    } //output_char
-
-    char * gets_s(  char * buf, size_t bufsize )
-    {
-        // getline (hangs, no echo)
-        // fscanf (works, no echo )
-        // fgets (hangs, no echo)
-
-        size_t len = 0;
-        do
-        {
-            char ch = _getch();
-            if ( '\n' == ch || '\r' == ch )
-            {
-                output_char ( 0xa );
-                break;
-            }
-
-            if ( len >= ( bufsize - 1 ) )                
-                break;
-
-            if ( 0x7f == ch || 8 == ch ) // backspace (it's not 8 for some reason)
-            {
-                if ( len > 0 )
-                {
-                    output_char( 8 );
-                    output_char( ' ' );
-                    output_char( 8 );
-                    len--;
-                }
-            }
-            else
-            {
-                output_char( ch );
-                buf[ len++ ] = ch;
-            }
-        } while( true );
-
-        buf[ len ] = 0;
-        return buf;
-    
-    }
-
-#endif
-
-void CreateMemoryDump()
+static void CreateMemoryDump()
 {
     FILE * fp = fopen( "ntvao.dmp", "w" );
     if ( 0 == fp )
@@ -241,23 +124,24 @@ uint8_t mos6502_invoke_hook( void )
     if ( 0xffe5 == address ) // apple 1
     {
         printf( "%X", 0xf & cpu.a );
+        fflush( stdout );
         return 0x60; // rts
     }
     else if ( 0xffdc == address ) // apple 1
     {
         printf( "%02X", cpu.a );
+        fflush( stdout );
         return 0x60; // rts
     }
     else if ( 0xffef == address ) // apple 1
     {
         char c = cpu.a;
-#ifdef _MSC_VER        
         if ( 0x0d != c )
-#endif        
         {
             if ( g_forceUppercase )
                 c = toupper( c );
-            output_char( c );
+            printf( "%c", c );
+            fflush( stdout );
         }
 
         return 0x60; // rts
@@ -267,7 +151,8 @@ uint8_t mos6502_invoke_hook( void )
         // On the Apple 1 this emits a CR then returns to the monitor
         // Here the app is just terminated
 
-        output_char( '\n' );
+        printf( "\n" );
+        fflush( stdout );
 
         g_executionEnded = true;
         cpu.end_emulation();
@@ -285,7 +170,7 @@ void LoadInputFile()
     printf( "filename to read: " );
     fflush( stdout );
     char acfilename[ MAX_PATH ];
-    char * result = gets_s( acfilename, _countof( acfilename ) );
+    char * result = ConsoleConfiguration::portable_gets_s( acfilename, _countof( acfilename ) );
     if ( result )
     {
         tracer.Trace( "reading file %s to input stream\n", result );
@@ -316,8 +201,8 @@ void LoadInputFile()
         }
         else
         {
-            printf( "failed to open the file, error %d", errno );
-            output_char( 0xa ); // so linux and Windows can each do their thing
+            printf( "failed to open the file, error %d\n", errno );
+            fflush( stdout );
         }
     }
 } //LoadInputFile
@@ -335,22 +220,25 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
         g_KbdPeekHappened = true;
 
-        if ( _kbhit() )
+        if ( ConsoleConfiguration::portable_kbhit() )
         {
             // if the input event is a control character, process it and don't pass it on
             // 1..26 are ^a through ^z. ^c isn't sent through _getch. pass through carriage returns and backspace
 
-            char ch = _getch();
-#ifndef _MSC_VER
+            char ch = ConsoleConfiguration::portable_getch();
             if ( 0xa == ch )
                 ch = 0xd;
-#endif
 
             if ( ch < 26 && 0x08 != ch && 0x0d != ch && 0x7f != ch )
             {
                 // ^ character processing...
 
                 if ( 17 == ch ) // 'q' for quit
+                {
+                    g_executionEnded = true;
+                    cpu.end_emulation();
+                }
+                else if ( 3 == ch ) // 'c' ... this never happens on Windows, which uses ControlHandler looking for ^C
                 {
                     g_executionEnded = true;
                     cpu.end_emulation();
@@ -383,12 +271,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
         }
         else
         {
-#ifdef _MSC_VER            
-            SleepEx( 1, FALSE ); // prevent a tight busy loop
-#else
-            struct timespec ts = { 0, 1000000 };
-            nanosleep( &ts, 0 );            
-#endif            
+            sleep_ms( 1 ); // prevent a tight busy loop
             return 0; // high bit off, no key available
         }
     }
@@ -414,9 +297,9 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
         g_KbdPeekHappened = true;
 
-        if ( _kbhit() )
+        if ( ConsoleConfiguration::portable_kbhit() )
         {
-            char ch = _getch();
+            char ch = ConsoleConfiguration::portable_getch();
             tracer.Trace( "_getch returned %02x\n", ch );
             ch = toupper( ch );      // the Apple 1 expects only upppercase
             ch |= 0x80;              // the high bit should be set on the Apple 1
@@ -440,7 +323,8 @@ void mos6502_apple1_store( uint16_t address )
             if ( 0x0d == ch )
                 ch = 0x0a;
 
-            output_char( ch );
+            printf( "%c", ch );
+            fflush( stdout );
         }
         memory[ 0xd012 ] = 0;  // Indicate that the character has been consumed
     }
@@ -597,7 +481,7 @@ static bool ishex( char c )
     return ( ( c >= 'A' && c <= 'F' ) || ( c >= 'a' && c <= 'f' ) || ( c >= ' ' && c <= '9' ) );
 } //ishex
 
-uint8_t read_byte( char * p )
+static uint8_t read_byte( char * p )
 {
     char ac[3];
     ac[0] = p[0];
@@ -607,7 +491,7 @@ uint8_t read_byte( char * p )
     return (uint8_t) strtoul( ac, 0, 16 );
 } //read_byte
 
-uint16_t read_word( char * p )
+static uint16_t read_word( char * p )
 {
     char ac[5];
     ac[0] = p[0];
@@ -622,7 +506,7 @@ uint16_t read_word( char * p )
 // http://www.piclist.com/techref/fileext/hex/intel.htm
 // :, reclen(1), offset(2), rectype(1), data/info, chksum(1)
 
-bool load_file_intel_format( FILE * fp )
+static bool load_file_intel_format( FILE * fp )
 {
     char acLine[ 120 ];
 
@@ -660,7 +544,6 @@ bool load_file_intel_format( FILE * fp )
 
     fclose( fp );
 
-    //tracer.TraceBinaryData( memory + 0x400, 0x100, 2 );
     return true;
 } //load_file_intel_format
 
@@ -808,17 +691,21 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
 
 #ifdef _MSC_VER
 
-BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
-{
-    if ( CTRL_C_EVENT == fdwCtrlType )
+    BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
     {
-        g_executionEnded = true;
-        cpu.end_emulation();
-        return TRUE;
-    }
+        if ( CTRL_C_EVENT == fdwCtrlType )
+        {
+            g_executionEnded = true;
+            cpu.end_emulation();
+            return TRUE;
+        }
+    
+        return FALSE;
+    } //ControlHandler
 
-    return FALSE;
-} //ControlHandler
+#else // non-Windows can get ^c from getch(), so no need for a handler
+
+    #define ControlHandler 0
 
 #endif
 
@@ -849,7 +736,7 @@ static char * RenderNumberWithCommas( long long n, char * ac )
     return ac;
 } //RenderNumberWithCommas
 
-int ends_with( const char * str, const char * end )
+static int ends_with( const char * str, const char * end )
 {
     size_t len = strlen( str );
     size_t lenend = strlen( end );
@@ -933,20 +820,15 @@ int main( int argc, char * argv[] )
     {
         strcpy( acHex, pcHEX );
 
-        FILE * fp = fopen( acHex, "r" );
-        if ( fp )
-            fclose( fp );
-        else
+        if ( !file_exists( acHex ) )
         {
             if ( ends_with( acHex, ".hex" ) )
                 usage( "can't find command file" );
             else
             {
                 strcat( acHex, ".hex" );
-                FILE * fp = fopen( acHex, "r" );
-                if ( fp )
-                    fclose( fp );
-                else
+
+                if ( !file_exists( acHex ) )
                     usage( "can't find command file" );
             }
         }
@@ -955,22 +837,15 @@ int main( int argc, char * argv[] )
     memset( &cpu, 0, sizeof( cpu ) );
     memset( memory, 0, sizeof( memory ) );
 
-#ifdef _MSC_VER
     ConsoleConfiguration consoleConfig;
     if ( g_use40x24 )
-        consoleConfig.EstablishConsole( 40, 24, ControlHandler );
-#else
-    set_conio_terminal_mode();
-#endif
+        consoleConfig.EstablishConsole( 40, 24, (void *) ControlHandler );
 
     high_resolution_clock::time_point tStart = high_resolution_clock::now();
+
     uint64_t total_cycles = invoke_command( ( 0 != acHex[ 0 ] ) ? acHex : 0, clockrate );
 
-#ifdef _MSC_VER
     consoleConfig.RestoreConsole();
-#else
-    reset_terminal_mode();    
-#endif
 
     printf( "\n" );
     if ( showPerformance )
