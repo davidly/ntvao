@@ -90,7 +90,7 @@ const char * MOS_6502::render_operation( uint16_t address )
     char actemp[ 60 ];
     strcpy( ac, ins_6502[ memory[ address ] ].assembly );
     char * pnum = 0;
-    if ( pnum = strstr( ac, "8" ) )
+    if ( ( pnum = strstr( ac, "8" ) ) )
     {
         uint8_t num = memory[ address + 1 ];
         strcpy( actemp, ac );
@@ -98,7 +98,7 @@ const char * MOS_6502::render_operation( uint16_t address )
         strcat( actemp, pnum + 1 );
         strcpy( ac, actemp );
     }
-    else if ( pnum = strstr( ac, "16" ) )
+    else if ( ( pnum = strstr( ac, "16" ) ) )
     {
         uint16_t num = mword( address + 1 );
         strcpy( actemp, ac );
