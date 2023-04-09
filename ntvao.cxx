@@ -291,7 +291,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
             ch = toupper( ch );      // the Apple 1 expects only upppercase
             ch |= 0x80;              // the high bit should be set on the Apple 1
-            memory[ 0xd011 ] = 0;    // this should alread be reset
+            memory[ 0xd011 ] = 0;    // this should already be reset
             return ch;
         }
 
@@ -303,7 +303,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
             tracer.Trace( "_getch returned %02x\n", ch );
             ch = toupper( ch );      // the Apple 1 expects only upppercase
             ch |= 0x80;              // the high bit should be set on the Apple 1
-            memory[ 0xd011 ] = 0;    // this should alread be reset
+            memory[ 0xd011 ] = 0;    // this should already be reset
             return ch;
         }
     }
