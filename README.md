@@ -1,14 +1,14 @@
 # ntvao
-NT Virtual Apple One. Apple 1 emulator for Windows and Linux.
+NT Virtual Apple One. Apple 1 emulator for Windows, MacOS, and Linux.
 
 This app (like many others!) emulates an Apple 1. To invoke it in that mode, run ntvao with no arguments.
 
-Linux vs. Windows:
+Linux and MacOS vs. Windows:
 
-    * 40x24 mode only works on Windows; on Linux the whole terminal window is used. 
-    * The emulator runs about 20% faster on Linux because the Gnu C++ compiler generates more efficient 
-      code than the Microsoft compiler. (But you can  build with the Gnu compiler on Windows to get
-      the performance there too.)
+    * 40x24 mode only works on Windows; on Linux and MacOS the whole terminal window is used. 
+    * The emulator runs about 20% faster on Linux and MacOS because the Gnu C++ compiler generates more
+      efficient code than the Microsoft compiler. (But you can build with the Gnu compiler on Windows to
+      get the performance there too.)
 
 Usage:
 
