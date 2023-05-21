@@ -24,6 +24,7 @@
 #include <vector>
 #include <time.h>
 #include <string.h>
+#include <assert.h>
 #include <chrono>
 #include <cstring>
 
@@ -123,18 +124,22 @@ uint8_t mos6502_invoke_hook( void )
 
     if ( 0xffe5 == address ) // apple 1
     {
+        tracer.Trace( "ffe5 hook invoked; writing hex\n" );
         printf( "%X", 0xf & cpu.a );
         fflush( stdout );
         return 0x60; // rts
     }
     else if ( 0xffdc == address ) // apple 1
     {
+        tracer.Trace( "ffdc hook invoked; writing hex\n" );
         printf( "%02X", cpu.a );
         fflush( stdout );
         return 0x60; // rts
     }
     else if ( 0xffef == address ) // apple 1
     {
+        tracer.Trace( "ffef hook invoked; writing character\n" );
+
         char c = cpu.a;
         if ( 0x0d != c )
         {
@@ -148,6 +153,8 @@ uint8_t mos6502_invoke_hook( void )
     }
     else if ( 0xff1f == address )
     {
+        tracer.Trace( "ff1f hook invoked; exiting\n" );
+
         // On the Apple 1 this emits a CR then returns to the monitor
         // Here the app is just terminated
 
@@ -323,6 +330,7 @@ void mos6502_apple1_store( uint16_t address )
             if ( 0x0d == ch )
                 ch = 0x0a;
 
+            tracer.Trace( "d012 store invoked; outputting character %02x '%c'\n", ch, ch );
             printf( "%c", ch );
             fflush( stdout );
         }
@@ -747,6 +755,12 @@ static int ends_with( const char * str, const char * end )
     return ( 0 == _stricmp( str + len - lenend, end ) );
 } //ends_with
 
+void fill_random( uint8_t *p, size_t c )
+{
+    for ( size_t i = 0; i < c; i++ )
+        p[ i ] = (uint8_t) rand();
+} //fill_random
+
 int main( int argc, char * argv[] )
 {
     char * pcHEX = 0;
@@ -835,7 +849,7 @@ int main( int argc, char * argv[] )
     }
 
     memset( &cpu, 0, sizeof( cpu ) );
-    memset( memory, 0, sizeof( memory ) );
+    fill_random( memory, sizeof( memory ) ); // real hardware has random values
 
     ConsoleConfiguration consoleConfig;
     if ( g_use40x24 )

@@ -40,7 +40,7 @@ struct Instruction
 
 static const Instruction ins_6502[ 256 ] =
 {
-    /*00*/ 2,7,"brk",     2,6,"ora (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"ORA a8",    2,5,"asl a8",    0,0,"", 
+    /*00*/ 2,7,"brk",     2,6,"ora (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"ora a8",    2,5,"asl a8",    0,0,"", 
     /*08*/ 1,3,"php",     2,2,"ora #d8",    1,2,"asl a",   0,0,"", 0,0,"",          3,4,"ora a16",   3,6,"asl a16",   1,1,"(hook)", 
     /*10*/ 2,3,"bpl r8",  2,5,"ora (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"ora a8,x",  2,6,"asl a8,x",  0,0,"", 
     /*18*/ 1,2,"clc",     3,4,"ora a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"ora a16,x", 3,7,"asl a16,x", 0,0,"", 
@@ -113,9 +113,13 @@ const char * MOS_6502::render_operation( uint16_t address )
 void MOS_6502::trace_state()
 {
     if ( tracer.IsEnabled() ) // avoid the formatting if not actually tracing
+    {
+        //tracer.TraceBinaryData( & memory[ 0 ], 16, 2 );
+        //tracer.TraceBinaryData( & memory[ 0x01f0 ], 16, 2 );
         tracer.Trace( "pc %04x, op %02x, op2 %02x, op3 %02x, a %02x, x %02x, y %02x, sp %02x, %s, %s\n",
                       pc, memory[ pc ], memory[ pc + 1 ], memory[ pc + 2 ],
                       a, x, y, sp, render_flags(), render_operation( pc ) );
+    }
 } //trace_state
 
 uint8_t MOS_6502::op_rotate( uint8_t rotate, uint8_t val )
@@ -451,7 +455,11 @@ _restart_op:
                     val = memory[ address ];
                 }
                 else
-                    assert( !"invalid comparision instruction" );
+                {
+                    printf( "mos6502 unsupported comparison instruction %02x\n", op );
+                    tracer.Trace( "mos6502 unsupported comparison instruction %02x\n", op );
+                    exit( 1 );
+                }
     
                 op_math( math, val );
             }
@@ -494,7 +502,11 @@ _restart_op:
                         address += (uint16_t) x;               // a16,x   crossing page boundry is free
                 }
                 else
-                    assert( !"unsupported rotate instruction" );
+                {
+                    printf( "mos6502 unsupported rotate instruction %02x\n", op );
+                    tracer.Trace( "mos6502 unsupported rotate instruction %02x\n", op );
+                    exit( 1 );
+                }
     
                 uint8_t rotate = ( ( hi >> 4 ) & 0xf ) / 2;
                 memory[ address ] = op_rotate( rotate, memory[ address ] );
@@ -530,7 +542,7 @@ _restart_op:
                     tracer.Trace( "mos6502 unsupported store instruction %02x\n", op );
                     exit( 1 );
                 }
-    
+
                 memory[ address ] = tostore;
 
                 // minimal Apple 1 emulation support
@@ -564,7 +576,11 @@ _restart_op:
                 else if ( 0xb9 == op || 0xbe == op )               // a16,y
                     address = mword( pc + 1 ) + y;             
                 else
-                    assert( !"unsupported load instruction" );
+                {
+                    printf( "mos6502 unsupported load truction opcode %02x\n", op );
+                    tracer.Trace( "mos6502 unsupported load instruction opcode %02x\n", op );
+                    exit( 1 );
+                }
 
                 // minimal Apple 1 emulation support
                 if ( address >= 0xd010 && address <= 0xd012 )
