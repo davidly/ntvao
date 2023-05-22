@@ -646,6 +646,11 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
     cpu.pc = g_startAddress;
     cpu.sp = 0xff;
 
+    memory[ 0xd010 ] = 0;
+    memory[ 0xd011 ] = 0;
+    memory[ 0xd012 ] = 0;
+    memory[ 0xd013 ] = 0;
+
     if ( g_useHooks )
     {
         // Set hooks for Apple 1 API compatibility instead of using the Apple 1 Monitor
