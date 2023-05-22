@@ -1,0 +1,149 @@
+;:ts=8
+;Copyright (C) 1984 by Manx Software Systems, Inc.
+;
+
+codeseg segment para public 'code'
+dataseg segment para public 'data'
+dataseg ends
+	assume cs:codeseg,ds:dataseg,es:dataseg,ss:dataseg
+	extrn $cswt:near
+	extrn $begin:near
+dataseg segment para public 'data'
+	public	Bauds_
+Bauds_ equ this word
+	dw   50,0900h
+	dw   75,0600h
+	dw  110,0417h
+	dw  150,0300h
+	dw  300,0180h
+	dw  600,00c0h
+	dw 1200,0060h
+	dw 1800,0040h
+	dw 2000,003ah
+	dw 2400,0030h
+	dw 3600,0020h
+	dw 4800,0018h
+	dw 7200,0010h
+	dw 9600,000ch
+	dw    0,   0
+dataseg ends
+
+TXBUF	equ	03f8h
+RXBUF	equ	03f8h
+DIVLO	equ	03f8h
+DIVHI	equ	03f9h
+INTEN	equ	03f9h
+INTID	equ	03fah
+LINCT	equ	03fbh
+MDMCT	equ	03fch
+LINST	equ	03fdh
+MDMST	equ	03feh
+
+DR	equ	001h
+THRE	equ	020h
+
+	extrn	quit_:near
+	public cinit_
+cinit_ proc	near
+	mov	bx,sp
+	push	si
+	mov	si, offset Bauds_
+$7:
+	cmp	 word ptr  [si],0
+	beq 	$6
+	mov	ax, word ptr  [si]
+	cmp	ax,word ptr 2[bx]
+	beq 	$6
+$5:
+	add	si,4
+	jmp	$7
+$6:
+	mov	bx,si			;copy pointer
+	pop	si
+	mov	al,087h			;8 bits, no parity, 2 stop
+	mov	dx,LINCT
+	out	dx,al
+	mov	al,2[bx]		;baud rate low byte
+	mov	dx,DIVLO
+	out	dx,al
+	mov	al,3[bx]		;baud rate high byte
+	mov	dx,DIVHI
+	out	dx,al
+	mov	al,03h			;now talk to other registers
+	mov	dx,LINCT
+	out	dx,al
+	mov	al,0			;disable all interrupts
+	mov	dx,INTEN
+	out	dx,al
+	ret
+
+	public	cget_
+cget_:
+	push	dx
+	mov	cx,02fffh
+	mov	dx,LINST
+cget1:
+	in	al,dx			;get the status
+	and	al,DR			;check for receiver full
+	jnz	cget3			;yes, get char
+	loop	cget1			;try again
+	push	es
+	mov	ah,6			;console i/o call
+	mov	dx,0ffh
+	int	21h
+	pop	es
+	cmp	al,03
+	jnz	cget2
+	mov	ax,5
+	push	ax
+	call	quit_
+cget2:
+	mov	ax,-1			;return -1
+	pop	dx
+	ret
+cget3:
+	mov	dx,RXBUF
+	in	al,dx			;yes, get the byte
+	sub	ah,ah
+	pop	dx
+	ret
+
+	public	cput_
+cput_:
+	push	bx
+	mov	bx,sp
+	push	dx
+	mov	dx,LINST
+cput1:
+	in	al,dx			;get the status
+	test	al,THRE			;is the transmitter ready?
+	jz	cput1			;not yet
+	mov	al,4[bx]
+	mov	dx,TXBUF
+	out	dx,al		;output the data
+	pop	dx
+	pop	bx
+	ret
+
+	public	cflush_
+cflush_:
+	ret
+
+	public	clrchan_
+clrchan_:
+	push	dx
+	mov	dx,LINST
+	in	al,dx			;get the status
+	and	al,DR			;check for receiver full
+	jz	clrch1			;yes, get char
+	mov	dx,RXBUF
+	in	al,dx			;yes, get the byte
+clrch1:
+	sub	ah,ah
+	pop	dx
+	ret
+
+cinit_	endp
+codeseg	ends
+	end
+

@@ -1,0 +1,510 @@
+*:ts=8
+* Copyright (c) 1982 by Manx Software Systems
+*
+	instxt	<zpage.h>
+
+STR	EQU	R0
+DEXP	EQU	R0+2
+NDIG	EQU	R1
+B	EQU	R1+2
+INDEX	EQU	R2
+MAXDIG	EQU	R2+1
+FMT	EQU	R2+2
+
+PREC	EQU	8
+
+*
+*	float to ascii conversion
+*	ftoa(double, str, maxwidth, fmt);
+*		fmt == 0 => 'e'
+*		       1 => 'f'
+*		       2 => 'g'
+*
+	public	ftoa_
+ftoa_	ldy	#0		;get the value into the double acc
+	clc
+	lda	SP
+	adc	#2
+	sta	VAL
+	tya
+	adc	SP+1
+	sta	VAL+1
+	jsr	.ldacc#
+	ldy	#10		;next get a ptr to the char string
+	lda	(SP),Y
+	sta	STR
+	iny
+	lda	(SP),Y
+	sta	STR+1
+	iny			;get the number of digits to display
+	clc
+	lda	(SP),Y
+	adc	#1
+	cmp	#17		;no more than 16
+	bcc	ftoa1
+	lda	#16
+ftoa1	sta	MAXDIG
+	sta	NDIG
+	lda	#0
+	sta	NDIG+1
+	iny
+	iny			;get a flag for E or F format
+	lda	(SP),Y
+	sta	FMT
+*
+	ldy	#0
+	sty	DEXP		;initialize decimal exponent count
+	sty	DEXP+1
+	lda	(ACC),Y
+	bpl	ftoa2		;check for negative number
+	eor	#$80
+	sta	(ACC),Y
+	lda	#'-
+	sta	(STR),Y
+	iny
+ftoa2	sty	INDEX
+	jsr	dtst
+	beq	ftoa6
+ftoa3	ldy	#1		;get the exponent
+	lda	(ACC),Y
+	cmp	#1
+	bmi	ftoa5		;acc too small
+	bne	ftoa4		;acc too big
+	iny			;acc could be just right
+	lda	(ACC),Y
+	cmp	#10		;must be less than ten
+	bcc	ftoa6
+ftoa4	jsr	msmall		;make it smaller
+	jmp	ftoa3
+ftoa5	jsr	mbig		;make it bigger
+	jmp	ftoa3
+ftoa6	lda	FMT		;F or E format
+	cmp	#2
+	bne	ffmt
+*
+	public	gfmt
+gfmt	ldy	#12
+	lda	(SP),Y
+	cmp	#17
+	bcc	gfmt1
+	lda	#16
+gfmt1	sta	NDIG
+	lda	#0
+	sta	NDIG+1
+	lda	DEXP
+	cmp	#-4
+	lda	DEXP+1
+	sbc	#-1
+	bvs	j1
+	bmi	gfmt2
+	bpl	j2
+j1	bpl	gfmt2
+j2	lda	DEXP
+	cmp	NDIG
+	lda	DEXP+1
+	sbc	NDIG+1
+	bvs	j3
+	bmi	ftoa7
+	bpl	gfmt2
+j3	bpl	ftoa7
+gfmt2	lda	#0
+	sta	FMT
+*
+ffmt	lda	FMT
+	beq	ftoa7
+	clc
+	lda	NDIG		;for F format
+	adc	DEXP
+	sta	NDIG
+	lda	NDIG+1
+	adc	DEXP+1
+	sta	NDIG+1
+	jmp	ftoa7
+*
+ftoa7	ldx	NDIG+1		;what's the precision
+	bmi	ftoa7a
+	bne	ftoa8a
+	ldx	NDIG
+	dex
+	bpl	ftoa8
+ftoa7a	ldx	#0
+ftoa8	cpx	#16
+	bcc	ftoa9
+ftoa8a	ldx	#16
+ftoa9	jsr	dornd		;add in appropriate .5
+ftoa10	lda	DEXP
+	pha
+	lda	DEXP+1
+	pha
+	ldx	#0
+	lda	FMT
+	beq	ftoa15		;E fmt, skip
+	ldx	DEXP
+	lda	DEXP+1
+	bpl	ftoa15		;F fmt, no leading zeros
+	ldy	INDEX
+	lda	#'0		;put out leading zeros
+	sta	(STR),Y
+	iny
+	lda	#'.		;put out the decimal also
+	sta	(STR),Y
+	iny
+	lda	NDIG+1		;how's the precision
+	bmi	ftoa11
+	lda	DEXP
+	eor	#$FF		;negate and decrement
+	jmp	ftoa12
+ftoa11	lda	MAXDIG
+ftoa12	tax
+	beq	ftoa14
+	lda	#'0
+ftoa13	sta	(STR),Y		;fill with zeroes
+	iny
+	dex
+	bne	ftoa13
+ftoa14	sty	INDEX		;save index
+	lda	#-1
+	tax
+ftoa15	sta	DEXP+1		;location of decimal point
+	stx	DEXP
+	lda	#-1
+	sta	B
+	sta	B+1
+ftoa16	inc	B		;next character
+	bne	ftoa16a
+	inc	B+1
+ftoa16a	lda	B
+	cmp	NDIG		;done enough chars yet
+	lda	B+1
+	sbc	NDIG+1
+	bcs	ftoa19
+	ldy	#1
+	lda	(ACC),Y
+	tax
+	lda	#'0
+	cpx	#1
+	bne	ftoa17
+	iny
+	clc
+	adc	(ACC),Y
+	tax
+	lda	#0
+	sta	(ACC),Y
+	txa
+ftoa17	ldy	INDEX
+	sta	(STR),Y
+	iny
+	lda	B
+	cmp	DEXP
+	bne	ftoa18
+	lda	B+1
+	cmp	DEXP+1
+	bne	ftoa18
+	lda	#'.
+	sta	(STR),Y
+	iny
+ftoa18	sty	INDEX
+	jsr	fmul
+	jmp	ftoa16
+ftoa19	pla
+	sta	DEXP+1
+	pla
+	sta	DEXP
+	lda	FMT
+	bne	ftoa24
+	ldy	INDEX
+	lda	#'E
+	sta	(STR),Y
+	iny
+	lda	#'+
+	sta	(STR),Y
+	lda	DEXP+1
+	bpl	ftoa20
+	lda	#'-
+	sta	(STR),Y
+	sec
+	lda	#0
+	sbc	DEXP
+	sta	DEXP
+	lda	#0
+	sta	DEXP+1
+ftoa20	iny
+	lda	DEXP
+	cmp	#100
+	bcc	ftoa21
+	tax
+	lda	#'1
+	sta	(STR),Y
+	iny
+	sec
+	txa
+	sbc	#100
+ftoa21	ldx	#0
+ftoa22	cmp	#10
+	bcc	ftoa23
+	sbc	#10
+	inx
+	bne	ftoa22
+ftoa23	iny
+	adc	#'0
+	sta	(STR),Y
+	dey
+	txa
+	adc	#'0
+	sta	(STR),Y
+	iny
+	iny
+	sty	INDEX
+ftoa24	ldy	INDEX
+	lda	#0
+	sta	(STR),Y
+	rts
+*
+*	make the accum smaller
+*
+msmall	ldx	#0
+msm1	ldy	#1
+msm2	lda	(ACC),Y
+	cmp	tens,X
+	bcc	msm4
+	bne	msm5
+	inx
+	iny
+	cpy	#9
+	bne	msm2
+	dex
+	bne	msm5
+msm4	txa
+	adc	#8
+	and	#$F8
+	tax
+	cpx	#56
+	bne	msm1
+	rts
+msm5	txa
+	and	#$F8
+	clc
+	adc	#56
+	tax
+	jsr	copy
+	jmp	msmall
+*
+*	make the accum bigger
+*
+mbig	ldx	#64
+mbig1	ldy	#1
+	lda	(ACC),Y
+	cmp	tens,X
+	bmi	mbig5
+	bne	mbig4
+	inx
+	iny
+mbig2	lda	(ACC),Y
+	cmp	tens,X
+	bcc	mbig5
+	bne	mbig4
+	inx
+	iny
+	cpy	#9
+	bne	mbig2
+	dex
+	bne	mbig5
+mbig4	txa
+	adc	#8
+	and	#$F8
+	tax
+	cpx	#120
+	bne	mbig1
+	rts
+mbig5	txa
+	and	#$F8
+	sec
+	sbc	#64
+	tax
+	jsr	copy
+	jmp	mbig
+*
+*
+*
+copy	txa
+	lsr	A
+	lsr	A
+	tay
+	clc
+	lda	tentab,Y
+	adc	DEXP
+	sta	DEXP
+	iny
+	lda	tentab,Y
+	adc	DEXP+1
+	sta	DEXP+1
+domul	txa
+	clc
+	adc	#7
+	tax
+	ldy	#PREC+1
+	lda	#$0
+copy1	sta	(SEC),Y
+	dey
+	cpy	#8
+	bne	copy1
+copy2	lda	tens,X
+	sta	(SEC),Y
+	dex
+	dey
+	bne	copy2
+	lda	#0
+	sta	(SEC),Y
+	jmp	.muld#
+*
+*	round to the amount in X
+*
+dornd	txa
+	asl	A
+	asl	A
+	asl	A
+	tax
+	ldy	#0
+	tya
+	sta	(SEC),Y
+	iny
+	sec
+	lda	half,X
+	sbc	#64
+	sta	(SEC),Y
+	iny
+	inx
+dornd1	lda	half,X
+	sta	(SEC),Y
+	iny
+	inx
+	cpy	#9
+	bne	dornd1
+	lda	#0
+dornd2	sta	(SEC),Y
+	iny
+	cpy	#14
+	bne	dornd2
+	jsr	.addd#
+	ldy	#1
+	lda	(ACC),Y
+	cmp	#1
+	bne	dornd3
+	iny
+	lda	(ACC),Y
+	cmp	#10		;still smaller than 10?
+	bcc	dornd3
+	jsr	msmall		;no, div again
+	lda	FMT
+	beq	dornd3
+	inc	NDIG
+	bne	dornd3
+	inc	NDIG+1
+dornd3	rts
+*
+*
+dtst	ldy	#0
+	lda	(ACC),Y
+	bne	dtst1
+	iny
+	lda	(ACC),Y
+	cmp	#-64
+	bne	dtst1
+	iny
+	lda	(ACC),Y
+	bne	dtst1
+	lda	#0
+	rts
+dtst1	lda	#1
+	rts
+*
+*	fast multiply by 10
+*
+fmul	lda	#0
+	ldy	#PREC+1
+fmul1	sta	(SEC),Y
+	dey
+	bpl	fmul1
+	ldy	#1
+	tya
+	sta	(SEC),Y
+	iny
+	lda	#10
+	sta	(SEC),Y
+	jsr	.swapd#
+	jmp	.muld#
+*
+*	necessary data
+*
+	dseg
+half
+* 0.5,
+	fcb	$40,$80,$00,$00,$00,$00,$00,$00
+* 0.05,
+	fcb	$40,$0C,$CC,$CC,$CC,$CC,$CC,$CD
+* 0.005,
+	fcb	$40,$01,$47,$AE,$14,$7A,$E1,$48
+* 0.0005,
+	fcb	$3F,$20,$C4,$9B,$A5,$E3,$54,$00
+* 0.00005,
+	fcb	$3F,$03,$46,$DC,$5D,$63,$88,$66
+* 0.000005,
+	fcb	$3E,$53,$E2,$D6,$23,$8D,$A3,$CD
+* 0.0000005,
+	fcb	$3E,$08,$63,$7B,$D0,$5A,$F6,$C8
+* 0.00000005,
+	fcb	$3D,$D6,$BF,$94,$D5,$E5,$7A,$66
+* 0.000000005,
+	fcb	$3D,$15,$79,$8E,$E2,$30,$8C,$3D
+* 0.0000000005,
+	fcb	$3D,$02,$25,$C1,$7D,$04,$DA,$D3
+* 0.00000000005,
+	fcb	$3C,$36,$F9,$BF,$B3,$AF,$7B,$80
+* 0.000000000005,
+	fcb	$3C,$05,$7F,$5F,$F8,$5E,$59,$26
+* 0.0000000000005,
+	fcb	$3B,$8C,$BC,$CC,$09,$6F,$50,$9A
+* 0.00000000000005,
+	fcb	$3B,$0E,$12,$E1,$34,$24,$BB,$43
+* 0.000000000000005,
+	fcb	$3B,$01,$68,$49,$B8,$6A,$12,$BA
+* 0.0000000000000005,
+	fcb	$3A,$24,$07,$5F,$3D,$CE,$AC,$33
+* 0.00000000000000005,
+	fcb	$3A,$03,$9A,$56,$52,$FB,$11,$38
+*
+tens
+* 1e64
+	fcb	$1B,$18,$4F,$03,$E9,$3F,$F9,$F5
+* 1e32
+	fcb	$0E,$04,$EE,$2D,$6D,$41,$5B,$87
+* 1e16
+	fcb	$07,$23,$86,$F2,$6F,$C1,$00,$00
+* 1e8
+	fcb	$04,$05,$F5,$E1,$00,$00,$00,$00
+* 1e4
+	fcb	$02,$27,$10,$00,$00,$00,$00,$00
+* 1e2
+	fcb	$01,$64,$00,$00,$00,$00,$00,$00
+* 1e1
+	fcb	$01,$0A,$00,$00,$00,$00,$00,$00
+* 1e-64
+	fcb	$E6,$0A,$87,$FE,$A2,$7A,$53,$A9
+* 1e-32
+	fcb	$F3,$33,$EC,$47,$AB,$51,$4E,$7F
+* 1e-16
+	fcb	$FA,$07,$34,$AC,$A5,$F6,$22,$72
+* 1e-8
+	fcb	$FD,$2A,$F3,$1D,$C4,$61,$18,$79
+* 1e-4
+	fcb	$FF,$06,$8D,$B8,$BA,$C7,$10,$CD
+* 1e-2
+	fcb	$00,$02,$8F,$5C,$28,$F5,$C2,$8F
+* 1e-1
+	fcb	$00,$19,$99,$99,$99,$99,$99,$9A
+* 1e0
+	fcb	$01,$01,$00,$00,$00,$00,$00,$00
+*
+tentab
+	fdb	-64,-32,-16,-8,-4,-2,-1,64,32,16,8,4,2,1
+	cseg

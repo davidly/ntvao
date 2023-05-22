@@ -1,0 +1,23 @@
+.SUFFIXES: .c .o .r86 .r .i 
+
+.c.r:
+	c65 -o $*.r $*.c
+
+.c.i:
+	cci -o $*.i $*.c
+
+.c.r86:
+	cc -o $*.r86 $*.c
+
+.c.o:
+	cc -c -o $*.o $*.c
+
+config: config.o cffile.o cflex.o cfsubs.o
+	cc -o config config.o cffile.o cflex.o cfsubs.o 
+
+config.exe: config.r86 cffile.r86 cflex.r86 cfsubs.r86
+	ln config.r86 cffile.r86 cflex.r86 cfsubs.r86 -lc
+
+config.bin: config.r cffile.r cflex.r cfsubs.r
+	ln65 -t -o xx config.r cffile.r cflex.r cfsubs.r -lc
+	strip65 <xx >config.bin

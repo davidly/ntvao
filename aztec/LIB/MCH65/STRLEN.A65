@@ -1,0 +1,39 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+
+	instxt	<zpage.h>
+
+*
+*	int
+*	strlen(str)
+*	  char *str;
+*
+*	number of non-null characters
+*
+
+STR	equ	R0+2
+
+	public	strlen_
+strlen_
+	ldy	#2		;copy args to registers
+	lda	(SP),Y
+	sta	STR
+	iny
+	lda	(SP),Y
+	sta	STR+1
+	ldy	#0
+	sty	R0+1		;init high byte of len to zero
+
+loop	lda	(STR),Y		;get byte
+	beq	done		;if null, done
+	iny			;bump to next
+	bne	loop
+	inc	STR+1		;crossed 256 byte boundary
+	inc	R0+1		;so bump high byte of count too
+	bne	loop
+
+done	sty	R0		;save low byte of count
+	rts
+

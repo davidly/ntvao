@@ -1,0 +1,32 @@
+NAME
+
+ tty - terminal emulation program
+
+SYNOPSIS
+
+ tty -syy -bxx
+
+DESCRIPTION
+
+ tty is a terminal emulation program that allows an Apple //
+operator to talk to another computer. To the other system, the Apple
+// will appear to be a terminal that supports some of the special
+features of the ADM-3A terminal.
+
+ tty reads characters from the keyboard and writes them to a serial
+interface. It also reads characters from this interface and writes them
+to the console. This interface must be compatible with the Super
+Serial Card.
+
+ The -s option defines the number of the slot containing the
+interface. The number immediately follows the -s, with no
+intervening spaces. If this option isn't specified, the interface is
+assumed to be in slot 2.
+
+ The -b option defines the baud rate of the serial interface. The
+baud rate immediately follows the -b option, with no intervening
+spaces. If this option isn't specified, the baud rate is assumed to be
+9600.
+
+ To exit tty, type control-2; ie, type the '2' key while holding down
+the control key.

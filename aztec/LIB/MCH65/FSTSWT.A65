@@ -1,0 +1,44 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+	public	.fstswt
+.fstswt	pla
+	sta	VAL
+	pla
+	sta	VAL+1
+	ldy	#1
+	clc
+	lda	(VAL),Y
+	adc	R0
+	sta	R0
+	iny
+	lda	(VAL),Y
+	adc	R0+1
+	sta	R0+1
+	iny
+	lda	R0
+	cmp	(VAL),Y
+	iny
+	lda	R0+1
+	sbc	(VAL),Y
+	iny
+	bcs	fstswt1
+	lda	R0
+	asl	A
+	rol	R0+1
+	adc	VAL
+	sta	VAL
+	lda	R0+1
+	adc	VAL+1
+	sta	VAL+1
+	ldy	#7
+fstswt1	lda	(VAL),Y
+	sta	R0
+	iny
+	lda	(VAL),Y
+	sta	R0+1
+	jmp	(R0)
+*

@@ -1,0 +1,32 @@
+.SUFFIXES: .c .a65 .o .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+REL= asin.r atan.r floor.r pow.r log.r random.r\
+	sin.r sinh.r sqrt.r tan.r tanh.r exp.r\
+	fabs.r flt65.r math.r ftoa.r atof.r flt2.r flt1.r        
+
+INT= asin.i atan.i floor.i pow.i log.i random.i\
+	sin.i sinh.i sqrt.i tan.i tanh.i exp.i\
+	fabs.i flt65.r math.r ftoa.r atof.r flt2.r flt1.r        
+
+SRC= asin.c atan.c floor.c pow.c log.c random.c\
+	sin.c sinh.c sqrt.c tan.c tanh.c exp.c\
+	fabs.c flt65.a65 math.a65 ftoa.a65 atof.a65 flt2.a65 flt1.a65        
+
+rel: $(REL)
+	echo done
+
+int: $(INT)
+	echo done

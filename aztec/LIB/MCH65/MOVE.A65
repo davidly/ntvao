@@ -1,0 +1,26 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+	public	.move
+.move	stx	VAL		;move size bytes from R1 to R0
+	ldy	#0
+	tax
+	bne	move1
+move0	dec	VAL
+	bpl	move1
+	ldx	#0
+	ldy	#1
+	rts
+move1	lda	(R1),Y
+	sta	(R0),Y
+	iny
+	bne	move2
+	inc	R0+1
+	inc	R1+1
+move2	dex
+	beq	move0
+	bne	move1
+*

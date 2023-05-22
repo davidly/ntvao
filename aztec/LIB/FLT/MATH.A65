@@ -1,0 +1,249 @@
+*:ts=8
+* Copyright (c) 1982,1985 by Manx Software Systems
+*
+	instxt	<zpage.h>
+
+PREC	EQU	8
+
+*
+	public	frexp_
+frexp_				;return mantissa and exponent
+	jsr	calcexp		;calculate power of two exponent
+	bne	retexp
+	lda	#0
+	sta	R0
+	sta	R0+1
+retexp	ldy	#10		;get addr of where to put exponent *jd 3/8/86
+	lda	(SP),Y
+	sta	VAL
+	iny
+	lda	(SP),Y
+	sta	VAL+1
+	ldy	#0
+	lda	R0		;and store the base 2 exponent
+	sta	(VAL),Y
+	iny
+	lda	R0+1
+	sta	(VAL),Y
+return	rts
+*
+	public	ldexp_
+ldexp_			;load new exponent value (actually add to exponent)
+	jsr	calcexp		;calculate power of two exponent
+	beq	return		;do nothing if number is zero or unnormalized
+	ldy	#10		; *jd 3/8/86
+	clc			;add argument to exponent
+	lda	(SP),Y
+	adc	R0
+	sta	R0
+	iny
+	lda	(SP),Y
+	adc	R0+1
+	sta	R0+1
+	bpl	posexp
+	sec			;make positive for div and modulo below
+	lda	#0
+	sbc	R0
+	sta	R0
+	lda	#0
+	sbc	R0+1
+	sta	R0+1
+	lda	R0
+	and	#7		;save amount to shift
+	pha
+	jsr	rsexp		;make power of 256
+	sec			;change the sign back
+	lda	#0
+	sbc	R0
+	sta	R0
+	jmp	ldrs
+posexp
+	ora	R0		;check if zero
+	beq	return		;no adjustment needed
+	lda	R0
+	pha			;save to compute left shift
+	jsr	rsexp		;make power of 256
+	pla
+	and	#7
+	beq	ldrsx
+	inc	R0		;bump exponent to make right shift
+	clc
+	eor	#$ff
+	adc	#9		;compensate for +1 (c = -(x - 8))
+ldrsx	pha
+ldrs	ldy	#1		;point at exponent
+	lda	R0
+	sta	(ACC),Y		;save exponent
+	pla			;recover count
+	sta	VAL
+rsloop	dec	VAL
+	bmi	return
+	ldy	#2
+	ldx	#7
+	clc
+rslp	lda	(ACC),Y
+	ror	A
+	sta	(ACC),Y
+	iny
+	dex
+	bne	rslp
+	beq	rsloop
+*
+rsexp	ldy	#3
+rselp	lsr	R0+1
+	ror	R0
+	dey
+	bne	rselp
+	rts
+*
+calcexp
+	clc			;*jd 3/8/86
+	lda	SP
+	adc	#2		;*jd 3/8/86
+	sta	VAL
+	lda	SP+1
+	adc	#0		;*jd 3/8/86
+	sta	VAL+1
+	jsr	.ldacc#		;load double into floating point accumulator
+	ldy	#1
+	lda	(ACC),Y		;get exponent value
+	cmp	#-64
+	bne	*+3
+creturn	rts
+	sta	R0		;save value
+	lda	#0		;make exponent zero for return
+	sta	(ACC),Y
+	ldy	#0		;sign extend value
+	lda	R0
+	bpl	*+3
+	dey
+	sty	R0+1
+	ldy	#3		;multiply by eight
+calclp	asl	R0		; to make power of two
+	rol	R0+1
+	dey
+	bne	calclp
+	ldy	#2		;get first byte of mantissa
+	lda	(ACC),Y
+	beq	creturn		;unnormalized number, give up
+lshft	lda	(ACC),Y
+	and	#$80		;test high bit of mantissa
+	bne	creturn		;mantissa >= 0.5
+	lda	R0		;else decrement the exponent and
+	bne	*+4
+	dec	R0+1
+	dec	R0
+	clc
+	ldy	#8		; ... shift the mantissa left one bit
+	ldx	#7
+lsloop	lda	(ACC),Y
+	rol	A
+	sta	(ACC),Y
+	dey
+	dex
+	bne	lsloop
+	iny
+	bne	lshft
+*
+	public	modf_
+modf_				;split into integral and fraction parts
+	clc			; **jd 3/8/86
+	lda	SP		;load double into floating point accumulator
+	adc	#2		; *jd 3/8/86
+	sta	VAL
+	lda	SP+1
+	adc	#0		; *jd 3/8/86
+	sta	VAL+1
+	jsr	.ldacc#
+	ldy	#10		;get addr of place to store integral part * jd 3/8/86
+	lda	(SP),Y
+	sta	VAL
+	iny
+	lda	(SP),Y
+	sta	VAL+1
+	lda	#0
+	ldy	#7		;zero out the integer
+mdclr	sta	(VAL),Y
+	dey
+	bpl	mdclr
+	clc
+	ldy	#1		;point at exponent part
+	lda	(ACC),Y
+	bmi	mreturn
+	bne	*+3
+mreturn	rts
+	adc	#64
+	and	#$7f
+	sta	R0
+	dey
+	lda	(ACC),Y		;get sign of number
+	and	#$80		;isolate
+	ora	R0		;combine with exponent
+	ldy	#0
+	sta	(VAL),Y		;store at iptr
+	iny
+	sty	R0+2		; R0+2 is index into result
+	lda	(ACC),Y		;refetch exponent
+	cmp	#7		limit move loop to 7 bytes
+	bcc	expok
+	lda	#7
+expok	sta	R0		;save count for loop
+	sec
+	lda	#7		;7 - loop count
+	sbc	R0
+	sta	R0+1		;save # bytes in fraction in R0+1
+	lda	#2		;point at beginning of mantissa
+	sta	R0+3		; R0+3 is index into acc
+intmov				;copy integer part into given area
+	ldy	R0+3
+	lda	(ACC),Y
+	ldy	R0+2
+	sta	(VAL),Y
+	inc	R0+2
+	inc	R0+3
+	dec	R0
+	bne	intmov
+*
+fnorm				;note: R0 is zero at start of loop
+	dec	R0+1
+	bmi	zfrac		;number of bytes in fraction now zero
+	ldy	R0+3
+	lda	(ACC),Y
+	bne	found		;look for non-zero byte
+	dec	R0+1
+	inc	R0+3
+	bne	fnorm
+found	ldy	#1
+	lda	R0		;store exponent
+	sta	(ACC),Y
+	iny
+	sty	R0+2		;this is now index into acc as well
+	ldx	#7		;count of number that must be cleared
+frcmov	ldy	R0+3		;get fraction byte
+	lda	(ACC),Y
+	ldy	R0+2		;and move to front
+	sta	(ACC),Y
+	inc	R0+2
+	inc	R0+3
+	dex			;decrement total byte count
+	dec	R0+1		;decrement number of bytes in fraction
+	bpl	frcmov		;still more to do
+	lda	#0		;fill rest with zero
+frcclr	sta	(ACC),Y
+	iny
+	dex
+	bne	frcclr
+	rts
+zfrac	ldy	#PREC+1		;no fraction, make zero
+	lda	#0
+zfrac1	sta	(ACC),Y
+	dey
+	bpl	zfrac1
+	ldy	#1
+	lda	#-64
+	sta	(ACC),Y
+	rts
+*
+*
+	ext	.fltused
+*

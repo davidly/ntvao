@@ -1,0 +1,113 @@
+*:ts=8
+*
+* Copyright (C) 1982,83,84,85 by Manx Software Systems, Inc.
+*
+				; jd 6/29/87:
+STKLEN	equ	1024		; length of stack area. default size = 1kb
+
+	instxt	<zpage.h>
+
+	bss	stack,STKLEN	;area for pseudo stack. jd 6/29/87
+
+	global	_mbot_,2	;ptr to bottom of heap space
+	global	_Top_,2		;ptr to current top of allocated heap space
+	global	acc,14		;floating point registers
+	global	sec,14
+
+	dseg
+	public	MEMRY
+MEMRY	rmb	2		;set by linker to _Uend+(size of overlay area)
+
+; sbrk assumes top of heap is _End_-_Stksize_
+	public	_Stksiz_
+_Stksiz_
+	fdb	0		;for ROM, _Stksize is usually 0
+	public	_End_
+_End_
+	fdb	0		;for ROM, ptr to end of heap space
+
+	cseg
+	public	_Uorg_,_Uend_,_Corg_,_Cend_,_Dorg_,_Dend_
+
+	public	.begin
+	entry	.begin
+.begin	cld
+					; jd 6/29/87:
+	lda	#<stack+STKLEN		;set SP to top of pseudo stack area
+	sta	SP
+	lda	#>stack+STKLEN
+	sta	SP+1
+
+SRC	equ	R0		;move inited data from ROM to RAM
+DST	equ	R0+2
+N	equ	R1
+	lda	#<_Cend_	;from addr: R0
+	sta	SRC
+	lda	#>_Cend_
+	sta	SRC+1
+	lda	#<_Dorg_	;to addr: R0+2
+	sta	DST
+	lda	#>_Dorg_
+	sta	DST+1
+	lda	#<_Dend_-_Dorg_	;len: R1
+	sta	N
+	lda	#>_Dend_-_Dorg_
+	sta	N+1
+	ldy	#0
+forw	ldx	N
+	beq	forw3
+forw1	lda	(SRC),Y
+	sta	(DST),Y
+	iny
+	bne	forw2
+	inc	SRC+1
+	inc	DST+1
+forw2	dex
+	bne	forw1
+forw3	dec	N+1
+	bpl	forw1
+
+	lda	#<_Uorg_	;clear out bss space
+	sta	VAL
+	lda	#>_Uorg_
+	sta	VAL+1
+	ldy	#0
+loop	tya
+	sta	(VAL),Y
+	inc	VAL
+	bne	skip
+	inc	VAL+1
+skip	lda	VAL
+	cmp	#<_Uend_
+	bne	loop
+	lda	VAL+1
+	cmp	#>_Uend_
+	bne	loop
+
+	clc
+	lda	MEMRY		;set ptrs to heap space
+	sta	_Top_		
+	sta	_mbot_	
+	sta	_End_
+	lda	MEMRY+1
+	sta	_Top_+1
+	sta	_mbot_+1
+	adc	#4		; 1k heap space, by default
+	sta	_End_+1
+
+	lda	#<acc		;init pointers for floating point registers
+	sta	ACC
+	lda	#>acc
+	sta	ACC+1
+	lda	#<sec
+	sta	SEC
+	lda	#>sec
+	sta	SEC+1
+
+	ldx	#255		; init hardware stack pointer *jd 6/29/87
+	txs
+	jsr	_main_#		; jsr needed for 6511s *jd 6/29/87
+	public .nmi		;dummy handler for non-maskable interrupt
+.nmi
+	public .irq		;dummy handler for interrupts
+.irq

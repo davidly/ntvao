@@ -1,0 +1,5 @@
+;:ts=8
+	public	getfinfo_
+getfinfo_
+	jmp	_getfinfo_
+	public	_getfinfo_

@@ -1,0 +1,60 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	char *
+*	strncat(s1, s2, n)
+*	  char *s1, *s2;
+*
+*	concatenate at most n chars from s2 onto s1
+*
+
+S1	equ	R0+2
+S2	equ	R0+4
+N	equ	R0+6
+
+	public	strncat_
+strncat_
+	ldy	#7		;copy args to regs
+load	lda	(SP),Y
+	sta	R0,Y
+	dey
+	bne	load
+	lda	R0+2		;copy s1 for return
+	sta	R0
+	lda	R0+3
+	sta	R0+1
+loop	lda	(S1),Y		;get char
+	beq	eloop		;got to end
+	iny
+	bne	loop
+	inc	S1+1
+	bne	loop
+
+eloop	clc
+	tya			;now update s1 to end of string
+	adc	S1
+	sta	S1
+	bcc	skip
+	inc	S1+1
+skip	ldy	#0
+	ldx	N
+	beq	decN
+copy	lda	(S2),Y		;get char from s2
+	sta	(S1),Y		;copy to s1
+	beq	done		;null byte, all done
+	iny
+	bne	decX
+	inc	S1+1
+	inc	S2+1
+decX	dex
+	bne	copy
+decN	dec	N+1
+	bpl	copy
+
+done	lda	#0		;null terminate
+	sta	(S1),Y
+	rts			;all done
+

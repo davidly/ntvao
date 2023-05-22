@@ -1,0 +1,61 @@
+*:ts=8
+
+	instxt	<zpage.h>
+
+*
+DATREG	EQU	$C088
+STAREG	EQU	$C089
+*
+*		u6551get(slot);
+*
+
+CNT	equ	VAL
+
+	public	u6551get_
+u6551get_
+	ldy	#2
+	lda	(SP),Y
+	tay
+	ldx	#0
+	stx	CNT
+	lda	#$40
+	sta	CNT+1
+uget1	lda	CNT
+	bne	uget2
+	dec	CNT+1
+	bpl	uget2
+	dex
+	txa
+	bne	uget3
+uget2	dec	CNT
+	lda	STAREG,Y
+	and	#$08
+	beq	uget1
+	lda	DATREG,Y
+uget3	sta	R0
+	stx	R0+1
+	rts
+*
+*
+*	u6551put(slot, char);
+*
+	public	u6551put_
+u6551put_
+	ldy	#4
+	lda	(SP),Y
+	sta	R0
+	lda	#0
+	sta	R0+1
+	ldy	#2
+	lda	(SP),Y
+	tay
+put1	lda	STAREG,Y
+	and	#$10
+	beq	put1
+	tya
+	ora	#DATREG+1
+	tay
+	lda	R0
+	sta	$BFFF,Y
+	rts
+*

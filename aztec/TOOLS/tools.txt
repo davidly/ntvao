@@ -1,0 +1,23 @@
+ReadMe for the CG65 Tools Directory
+
+tmake.exe - old version of turbo make which I use instead of the Aztec
+C make utility. I just prefer the syntax.
+
+You can build each of the samples from the shortcuts provided by typing
+"tmake" in their respective directories at the Windows XP command
+prompt created by the shortcut.
+
+The other utilities listed below are called by the MAKEFILE for the
+samples.I used the nmake from Microsoft's last 16 bit compiler to build
+these programs. Review the source code for more information.
+
+appibtxt.exe - converts apple to IBM text files or vice versa. Revised
+somewhat 2008 to display usage and handle unix text and added some
+minor fix-ups like autodetecting input files etc.
+
+makeprg.exe - strips the 4 byte bloadable header from a manx C65
+executable and outputs a same named file with an extension. Default
+extension is PRG.
+
+Bill Buckels
+Aug 2008

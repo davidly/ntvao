@@ -1,0 +1,13 @@
+# ---------------------------------------------------------
+# Microsoft C 8 makefile by Bill Buckels 2008
+# ---------------------------------------------------------
+PRG=appibtxt
+all: ..\$(PRG).exe
+
+
+$(PRG).obj: $(PRG).c
+      cl -c -AL -Zp1 $(PRG).c
+
+..\$(PRG).exe: $(PRG).obj $(PRG).c MAKEFILE 
+     link $(PRG).obj,..\$(PRG).exe, NUL, /ST:8192 /NOE /NOD oldnames llibce graphics, NUL
+     del $(PRG).obj

@@ -1,0 +1,132 @@
+
+
+
+
+
+            Aztec C65/ROM v3.2c, for PCDOS/MSDOS Host Systems
+                             Release Document
+                               30 June 1987
+
+
+
+            This package contains version 3.2c of Aztec C65/ROM,
+       for PCDOS/MSDOS host systems.
+
+            The printed release document that accompanies this
+       package describes version 3.2b of Aztec C65/ROM.  This
+       read.me file describes the changes that have been made to
+       Aztec C65/ROM in going from version 3.2b to 3.2c.
+
+
+       1.  Fixed bugs
+
+            Version 3.2c of Aztec C65/ROM fixes the following
+       problems that were in version 3.2b:
+
+             o The code that followed the assignment of an int to a
+               long was sometimes incorrect, because cg65 assumed
+               that the Y register contained 0 at that point, when
+               in fact it could contain either 0 or 0xff.
+
+             o The as65 assembler thought that jsr and some other
+               6502 instructions were only supported by the 65c02
+               processor.  Thus, when a program was assembled using
+               the -C option to disable support of 65c02
+               instructions, as65 would not assemble statements
+               that used these 6502 instructions.
+
+             o The ROM startup routine rom.a65 initialized the
+               pseudo stack pointer to the bottom of the stack area
+               instead of the top.
+
+             o There were two problems with the way that rom.a65
+               transfered control to the _main function: (1) it
+               didn't initialize the hardware stack register, and
+               (2) it issued a jmp instruction rather than a jsr.
+               On 6511 processors, these problems, coupled with the
+               6511's use of the zero page for the hardware stack,
+               caused the low part of the zero page to be
+               overwritten.  On all 65xx processors, the non-
+               initialization of the hardware stack occasionally
+               caused floating point operations to be performed
+               incorrectly.
+
+
+
+
+
+
+
+
+
+                                  - 1 -
+
+
+
+
+
+
+
+       Rel Doc.               Aztec C65/ROM, v3.2c, for PCDOS Hosts
+
+       2.  Known problems
+
+            Floating point only works correctly when the zero page
+       is laid out as defined by the supplied version of zpage.h
+       and by the compiler's default assumptions; i.e. when the 8-
+       byte stack area begins at 0, the 24-byte temporary register
+       area at 8, and the user register area is 16 bytes long and
+       begins at 0x80.
+
+
+       3.  Packaging
+
+            Version 3.2c of Aztec C65/ROM contains new versions of
+       the following:
+
+             o cg65 compiler;
+
+             o as65 assembler;
+
+             o rom.a65 startup routine in the rom.arc archive.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  - 2 -
+
+
+
+

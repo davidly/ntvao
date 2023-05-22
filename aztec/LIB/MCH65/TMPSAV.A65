@@ -1,0 +1,67 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+	public	.rpush
+.rpush	ldy	#1
+	sec
+	lda	SP
+	sbc	#2
+psh1	sta	SP
+	bcs	psh2
+	dec	SP+1
+psh2	lda	0,X
+	sta	(SP),Y
+	inx
+	dey
+	bpl	psh2
+	ldy	#1
+	ldx	#0
+	txa
+	rts
+
+	public	.rpushx
+.rpushx	ldy	#3
+	sec
+	lda	SP
+	sbc	#4
+	jmp	psh1
+
+	public	.rpull
+.rpull	ldy	#1
+pop1	lda	(SP),Y
+	sta	0,X
+	inx
+	dey
+	bpl	pop1
+	clc
+	lda	SP
+	adc	#2
+	sta	SP
+	bcc	pop2
+	inc	SP+1
+pop2	ldy	#1
+	ldx	#0
+	txa
+	rts
+
+	public	.rpullx
+.rpullx	ldy	#3
+lpop1	lda	(SP),Y
+	sta	0,X
+	inx
+	dey
+	bpl	lpop1
+	clc
+	lda	SP
+	adc	#4
+	sta	SP
+	bcc	lpop2
+	inc	SP+1
+lpop2	ldy	#1
+	ldx	#0
+	txa
+	rts
+*

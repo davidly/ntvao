@@ -1,0 +1,49 @@
+
+Samples.txt
+
+ReadMe for the Samples Directory for the AZCG65 MS-DOS hosted cross-
+compiler for 6502 target systems
+
+The samples directory contains some ProDOS programs targeted for the
+Aztec C SHELL.SYSTEM environment. I built these for my AppleShell
+distribution of the Aztec C SHELL programs for ProDOS and DOS.3.3.
+
+The libraries that come with this compiler are aimed at creating
+console programs rather than Graphics programs which makes CG65 well
+suited for producing programs for the ProDOS SHELL.
+
+Please note that I have added some utilities to the tools directory.
+One of these is an old version of turbo make which I use instead of the
+Aztec C make utility. I just prefer the syntax. You can build each of
+these samples from the shortcuts provided by typing "tmake" in their
+respective directories at the Windows XP command prompt created by the
+shortcut.
+
+The other utilities are called by the MAKEFILE for the samples. The TXT
+files are Apple Text versions of the C programs. They have no
+linefeeds... only carriage-returns. Best for viewing on an Apple //e in
+80 column mode, as are the sample programs best-run as well.
+
+The program EXMPL.C in the samples directory is slightly modified from
+the EXMPL.C program in the WORK directory. You will use the one in the
+WORK directory if you do the tutorial in the manual. Aside from the
+samples directory and the tools directory, I have added a DOCS
+directory where the electronic manual is stored. Otherwise, this is
+all set-up according to the manual.
+
+You can read the Manual in the DOCS directory for more information
+about CG65 and read the related source code for more information about
+what I have added.
+
+I should note that I used the Aztec C make utility to build the 4
+libraries supplied with CG65 and I used the nmake from Microsoft's last
+16 bit compiler to build the programs in the tools directory.
+
+And that is all.
+
+Have Fun!
+
+Bill Buckels 
+August 2008
+
+

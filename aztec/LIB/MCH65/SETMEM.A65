@@ -1,0 +1,38 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	void
+*	setmem(start, len, value);
+*	  char *start;
+*	  int len, value;
+*
+*	set memory block to a fixed value
+*
+
+START	equ	R0+2
+CNT	equ	R0+4
+VALUE	equ	R0+6
+
+	public	setmem_
+setmem_	ldy	#6		;copy params to zero page
+load	lda	(SP),Y
+	sta	R0,Y
+	dey
+	bpl	load
+	iny
+	lda	VALUE
+	ldx	CNT
+	beq	skip2
+loop	sta	(START),Y
+	iny
+	bne	skip
+	inc	START+1
+skip	dex
+	bne	loop
+skip2	dec	CNT+1
+	bpl	loop
+	rts
+

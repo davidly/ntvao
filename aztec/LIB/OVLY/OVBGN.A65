@@ -1,0 +1,114 @@
+;:ts=8
+
+	instxt	<zpage.h>
+
+	ext	ovmain_
+	ext	_Uorg_,_Uend_
+
+	bss	stack,7
+	bss	regs,16
+	bss	saveret,4
+
+	entry	.ovbgn
+	public	.ovbgn
+.ovbgn
+	lda	#<_Uorg_	;clear out bss space
+	sta	VAL
+	lda	#>_Uorg_
+	sta	VAL+1
+	ldy	#0
+loop	tya
+	sta	(VAL),Y
+	inc	VAL
+	bne	skip
+	inc	VAL+1
+skip	lda	VAL
+	cmp	#<_Uend_
+	bne	loop
+	lda	VAL+1
+	cmp	#>_Uend_
+	bne	loop
+
+	ldy	#15		;save REGS for ovexit
+r1	lda	REGS,Y
+	sta	regs,Y
+	dey
+	bpl	r1
+
+	iny			;save real return address
+	lda	(SP),Y
+	sta	saveret
+	iny
+	lda	(SP),Y
+	sta	saveret+1
+	pla
+	sta	saveret+2
+	pla
+	sta	saveret+3
+	clc			;skip over overlay name ptr
+	lda	SP
+	adc	#2
+	sta	SP
+	bcc	x1
+	inc	SP+1
+x1	lda	#>ovret		;set new return address
+	sta	(SP),Y
+	dey
+	lda	#<ovret
+	sta	(SP),Y
+
+	ldy	#5		;save stack frame for ovexit
+s1	lda	SP,Y
+	sta	stack,Y
+	dey
+	bpl	s1
+	tsx
+	stx	stack+6
+
+	jsr	ovmain_		;and call the function
+
+	public	ovret
+ovret
+	sec			;make dummy overlay name ptr
+	lda	SP
+	sbc	#2
+	sta	SP
+	bcs	o1
+	dec	SP+1
+o1	lda	saveret+3	;restore old return address
+	pha
+	lda	saveret+2
+	pha
+	ldy	#1
+	lda	saveret+1
+	sta	(SP),Y
+	dey
+	lda	saveret
+	sta	(SP),Y
+	rts
+
+	public	ovexit_
+ovexit_
+	ldy	#15		;restore REG variables
+r2	lda	regs,Y
+	sta	REGS,Y
+	dey
+	bpl	r2
+
+	ldy	#2		;get exit return code
+	lda	(SP),Y
+	sta	R0
+	iny
+	lda	(SP),Y
+	sta	R0+1
+
+	ldy	#5		;restore stack frame
+s2	lda	stack,Y
+	sta	SP,Y
+	dey
+	bpl	s2
+	ldx	stack+6
+	txs
+
+	jmp	ovret		;and do rest of return from overlay
+

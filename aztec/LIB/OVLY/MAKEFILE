@@ -1,0 +1,29 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.c.r:
+	cg65 +g0,8,80,10 $*.c
+
+.a65.r:
+	as65 $*.a65
+
+SRC=  ovld.c ovbgn.a65 ov.c ov1.c ov2.c 
+
+ovly:	ov.bin ov1.ovr ov2.ovr
+	echo done
+
+ov.bin:	ov.i ovld.r
+	ln65 -t -r +c 400 +d 1000 ov.i ovld.r -lci
+
+ov1.ovr:	ov1.i ovbgn.r ov.rsm
+	ln65 -t ov1.i ovbgn.r ov.rsm -lci
+
+ov2.ovr:	ov2.i ovbgn.r ov.rsm
+	ln65 -t ov2.i ovbgn.r ov.rsm -lci
+
+ovld.r: ovld.c
+	cg65 -DPATH ovld.c

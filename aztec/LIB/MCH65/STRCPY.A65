@@ -1,0 +1,39 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+
+	instxt	<zpage.h>
+
+*
+*	char *
+*	strcpy(s1, s2)
+*	  char *s1, *s2;
+*
+*	copy str2 to str1
+*
+
+S1	equ	R0+2
+S2	equ	R0+4
+
+	public	strcpy_
+strcpy_
+	ldy	#5
+load	lda	(SP),Y		;copy args to registers
+	sta	R0,Y
+	dey
+	bne	load
+	lda	S1		;copy address of s1 for return
+	sta	R0
+	lda	S1+1
+	sta	R0+1
+loop	lda	(S2),Y		;get byte from s2
+	sta	(S1),Y		;copy to s1
+	beq	done		;if null, end of string
+	iny
+	bne	loop
+	inc	S1+1
+	inc	S2+1
+	bne	loop
+done	rts
+

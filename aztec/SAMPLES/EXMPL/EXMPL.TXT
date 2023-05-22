@@ -1,0 +1,1 @@
+main(argc, argv)int argc;char *argv[];{	int idx;    for (idx = 0; idx < argc; idx++) printf("%s\n",argv[idx]);    printf("args = %d\n",argc);	printf("hello world\n");}

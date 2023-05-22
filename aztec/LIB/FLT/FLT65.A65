@@ -1,0 +1,424 @@
+*:ts=8
+* Copyright (c) 1982,1985 by Manx Software Systems
+*
+*
+	instxt	<zpage.h>
+
+
+PREC	EQU	8
+
+	dseg
+FADDR	fdb	FREG1
+FREG1	rmb	14
+*
+	cseg
+	public	.flt65
+.flt65
+*
+	public	f.ld.1		;load freg1 into primary (float)
+f.ld.1
+*
+	public	d.ld.1		;load freg1 into primary (double)
+d.ld.1
+*
+	public	.dswap		;swap freg1 and primary
+.dswap	lda	FADDR
+	ldx	ACC
+	sta	ACC
+	stx	FADDR
+	lda	FADDR+1
+	ldx	ACC+1
+	sta	ACC+1
+	stx	FADDR+1
+exit	ldy	#1
+	lda	#0
+	tax
+	rts
+*
+	public	.dpsh0
+.dpsh0	sec
+	lda	SP
+	sbc	#PREC+2
+	sta	SP
+	bcs	dpsh1
+	dec	SP+1
+dpsh1	ldy	#PREC+1
+dpsh2	lda	(ACC),Y
+	sta	(SP),Y
+	dey
+	bpl	dpsh2
+	bmi	exit
+*
+	public	.dpsh1
+.dpsh1	jsr	.dswap
+	jsr	.dpsh0
+	jmp	.dswap
+*
+	public	.dpul0
+.dpul0	ldy	#PREC+1
+dpul1	lda	(SP),Y
+	sta	(ACC),Y
+	dey
+	bpl	dpul1
+	clc
+	lda	SP
+	adc	#PREC+2
+	sta	SP
+	bcc	exit
+	inc	SP+1
+	bne	exit
+*
+	public	.dpul1
+.dpul1	jsr	.dswap
+	jsr	.dpul0
+	jmp	.dswap
+*
+	public	f.ls.0		;load freg0 into secondary (float)
+f.ls.0
+*
+	public	d.ls.0		;load freg0 into secondary (double)
+d.ls.0
+	jmp	.swapd#
+*
+	public	f.ls.1		;load freg1 into secondary (float)
+f.ls.1
+*
+	public	d.ls.1		;load freg1 into secondary (double)
+d.ls.1
+	lda	FADDR
+	ldx	SEC
+	sta	SEC
+	stx	FADDR
+	lda	FADDR+1
+	ldx	SEC+1
+	sta	SEC+1
+	stx	FADDR+1
+	ldx	#0
+	rts
+*
+	public	f.ld.i		;load immediate into primary (float)
+f.ld.i
+*
+	public	d.ld.i		;load immediate into primary (double)
+d.ld.i
+	jsr	immed
+	jmp	.ldacc#
+*
+	public	f.ls.i		;load immediate into secondary (float)
+f.ls.i
+*
+	public	d.ls.i		;load immediate into secondary (double)
+d.ls.i
+	jsr	immed
+	jmp	.ldsec#
+*
+immed	tsx
+	clc
+	lda	$103,X
+	sta	VAL
+	adc	#8
+	sta	$103,X
+	lda	$104,X
+	sta	VAL+1
+	adc	#0
+	sta	$104,X
+	inc	VAL
+	bne	imm1
+	inc	VAL+1
+imm1	ldx	#0
+	rts
+*
+	public	f.ld.g		;load global into primary (float)
+f.ld.g	jsr	twoval
+	jmp	.lsacc#
+*
+	public	d.ld.g		;load global into primary (double)
+d.ld.g	jsr	twoval
+	jmp	.ldacc#
+*
+	public	f.ls.g		;load global into secondary (float)
+f.ls.g	jsr	twoval
+	jmp	.lssec#
+*
+	public	d.ls.g		;load global into secondary (double)
+d.ls.g	jsr	twoval
+	jmp	.ldsec#
+*
+	public	f.ld.s		;load star into primary (float)
+f.ld.s	jsr	star
+	jmp	.lsacc#
+*
+	public	d.ld.s		;load star into primary (double)
+d.ld.s	jsr	star
+	jmp	.ldacc#
+*
+	public	f.ls.s		;load star into secondary (float)
+f.ls.s	jsr	star
+	jmp	.lssec#
+*
+	public	d.ls.s		;load star into secondary (double)
+d.ls.s	jsr	star
+	jmp	.ldsec#
+*
+	public	f.ld.l		;load local into primary (float)
+f.ld.l	jsr	twolcl
+	jmp	.lsacc#
+*
+	public	d.ld.l		;load local into primary (double)
+d.ld.l	jsr	twolcl
+	jmp	.ldacc#
+*
+	public	f.ls.l		;load local into secondary (float)
+f.ls.l	jsr	twolcl
+	jmp	.lssec#
+*
+	public	d.ls.l		;load local into secondary (double)
+d.ls.l	jsr	twolcl
+	jmp	.ldsec#
+*
+	public	f.ld.ls		;load local into primary (float)
+f.ld.ls	jsr	onelcl
+	jmp	.lsacc#
+*
+	public	d.ld.ls		;load local into primary (double)
+d.ld.ls	jsr	onelcl
+	jmp	.ldacc#
+*
+	public	f.ls.ls		;load local into secondary (float)
+f.ls.ls	jsr	onelcl
+	jmp	.lssec#
+*
+	public	d.ls.ls		;load local into secondary (double)
+d.ls.ls	jsr	onelcl
+	jmp	.ldsec#
+*
+	public	f.st.g		;store global from primary (float)
+f.st.g	jsr	twoval
+	jmp	.ssacc#
+*
+	public	d.st.g		;store global from primary (double)
+d.st.g	jsr	twoval
+	jmp	.sdacc#
+*
+	public	f.st.s		;store star from primary (float)
+f.st.s	jsr	star
+	jmp	.ssacc#
+*
+	public	d.st.s		;store star from primary (double)
+d.st.s	jsr	star
+	jmp	.sdacc#
+*
+	public	f.st.l		;store local from primary (float)
+f.st.l	jsr	twolcl
+	jmp	.ssacc#
+*
+	public	d.st.l		;store local from primary (double)
+d.st.l	jsr	twolcl
+	jmp	.sdacc#
+*
+	public	f.st.ls		;store local from primary (float)
+f.st.ls	jsr	onelcl
+	jmp	.ssacc#
+*
+	public	d.st.ls		;store local from primary (double)
+d.st.ls	jsr	onelcl
+	jmp	.sdacc#
+*
+twoval	tsx
+	clc
+	lda	$103,X
+	sta	VAL
+	adc	#2
+	sta	$103,X
+	lda	$104,X
+	sta	VAL+1
+	adc	#0
+	sta	$104,X
+	ldy	#1
+	lda	(VAL),Y
+	tax
+	iny
+	lda	(VAL),Y
+	sta	VAL+1
+	stx	VAL
+	ldx	#0
+	rts
+*
+oneval	tsx
+	clc
+	lda	$105,X
+	sta	VAL
+	adc	#1
+	sta	$105,X
+	lda	$106,X
+	sta	VAL+1
+	adc	#0
+	sta	$106,X
+	ldy	#1
+	ldx	#0
+	lda	(VAL),Y
+	rts
+*
+onelcl	jsr	oneval
+	bpl	onel1
+	dey
+onel1	dey
+	clc
+	adc	FRAME
+	sta	VAL
+	tya
+	adc	FRAME+1
+	sta	VAL+1
+	rts
+*
+twolcl	pla
+	sta	$40
+	pla
+	sta	$41
+	jsr	twoval
+	lda	$41
+	pha
+	lda	$40
+	pha
+	clc
+	lda	VAL
+	adc	FRAME
+	sta	VAL
+	lda	VAL+1
+	adc	FRAME+1
+	sta	VAL+1
+	rts
+*
+star	jsr	oneval
+	tax
+	lda	0,X
+	sta	VAL
+	lda	1,X
+	sta	VAL+1
+	ldx	#0
+	rts
+*
+	public	f.psh.i		;push immediate (float)
+f.psh.i	ldy	#4
+	jsr	immed
+	jmp	fpush
+*
+	public	f.psh.g		;push global (float)
+f.psh.g	jsr	twoval
+	jmp	fpush
+*
+	public	f.psh.s		;push star (float)
+f.psh.s	jsr	star
+	jmp	fpush
+*
+	public	f.psh.l		;push local (float)
+f.psh.l	jsr	twolcl
+	jmp	fpush
+*
+	public	f.psh.ls	;push local (float)
+f.psh.ls	jsr	onelcl
+	jmp	fpush
+*
+	public	d.psh.i		;push immediate (double)
+d.psh.i	ldy	#4
+	jsr	immed
+	jmp	dpush
+*
+	public	d.psh.g		;push global (double)
+d.psh.g	jsr	twoval
+	jmp	dpush
+*
+	public	d.psh.s		;push star (double)
+d.psh.s	jsr	star
+	jmp	dpush
+*
+	public	d.psh.l		;push local (double)
+d.psh.l	jsr	twolcl
+	jmp	dpush
+*
+	public	d.psh.ls	;push local (double)
+d.psh.ls	jsr	onelcl
+	jmp	dpush
+*
+	public	f.psh.0		;push freg0
+f.psh.0	
+*
+	public	d.psh.0		;push freg0
+d.psh.0	
+*
+	pla
+	sta	$40
+	pla
+	sta	$41
+	ldy	#9
+	jsr	.rndit#
+	ldy	#8
+stflt1	lda	(ACC),Y
+	pha
+	dey
+	cpy	#1
+	bne	stflt1
+	clc
+	lda	(ACC),Y
+	adc	#64
+	sta	VAL
+	dey
+	lda	(ACC),Y
+	and	#$80
+	ora	VAL
+	pha
+	lda	$41
+	pha
+	lda	$40
+	pha
+	rts
+*
+	dseg
+tmp	rmb	2
+*
+	cseg
+	public	f.psh.1		;push freg1
+f.psh.1	
+*
+	public	d.psh.1		;push freg1
+d.psh.1	
+*
+	jsr	.dswap#
+	pla
+	sta	tmp
+	pla
+	sta	tmp+1
+	jsr	f.psh.0
+	lda	tmp+1
+	pha
+	lda	tmp
+	pha
+	jmp	.dswap#
+*
+fpush	ldy	#4
+	pla
+	sta	$40
+	pla
+	sta	$41
+fpush1	lda	#0
+	pha
+	dey
+	bne	fpush1
+	ldy	#3
+	bne	dpush1
+*
+dpush	ldy	#7
+	pla
+	sta	$40
+	pla
+	sta	$41
+dpush1	lda	(VAL),Y
+	pha
+	dey
+	bpl	dpush1
+	lda	$41
+	pha
+	lda	$40
+	pha
+	rts
+*

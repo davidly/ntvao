@@ -1,0 +1,1862 @@
+;:ts=8
+;/*
+;   Tic-Tac-Toe proof you can't win for the Apple 1.
+;   This version builds with Aztec CG65 v3.2c 10-2-89 on MS-DOS 
+;targeting 6502.
+;   That compiler expects an Apple II, so there are hacks here f
+;or the Apple 1.
+;   There are dependencies on start.a, which initialzes for the 
+;Apple 1.
+;   Aztec C treats the char type as unsigned, and expands to 16 
+;bits for any expression (slow!)
+;*/
+;
+;#define LINT_ARGS
+;
+;#include <stdio.h>
+;
+;#define true 1
+;#define false 0
+;
+;#define ABPrune true         /* alpha beta pruning */
+;#define WinLosePrune true    /* stop early on win/lose */
+;#define WinFunPointers true  /* use function pointers for each 
+;move position. slightly faster on Apple 1 */
+;#define ScoreWin 6
+;#define ScoreTie 5
+;#define ScoreLose  4
+;#define ScoreMax 9
+;#define ScoreMin 2
+;#define DefaultIterations 100
+;
+;#define PieceX 1
+;#define PieceO 2
+;#define PieceBlank 0
+;
+;int g_Iterations = DefaultIterations;
+	dseg
+	public	g_Iterations_
+g_Iterations_
+	fdb	100
+	cseg
+;int g_Moves = 0;
+	dseg
+	public	g_Moves_
+g_Moves_
+	fdb	0
+	cseg
+;
+;char g_board[ 9 ];
+	global	g_board_,9
+;
+;#if WinFunPointers
+;
+;char pos0func()
+;{
+	public	pos0func_
+pos0func_
+	jsr	.csav#
+	fcb	.3
+	fdb	.2
+;    register char x = g_board[0];
+	lda	g_board_
+	sta	128
+;    
+;    if ( ( x == g_board[1] && x == g_board[2] ) ||
+;         ( x == g_board[3] && x == g_board[6] ) ||
+;         ( x == g_board[4] && x == g_board[8] ) )
+;        return x;
+	lda	g_board_+1
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.7
+	lda	21
+	cmp	25
+.7
+	jne	.6
+	lda	g_board_+2
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.8
+	lda	21
+	cmp	25
+.8
+	jeq	.5
+.6
+	lda	g_board_+3
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.10
+	lda	21
+	cmp	25
+.10
+	jne	.9
+	lda	g_board_+6
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.11
+	lda	21
+	cmp	25
+.11
+	jeq	.5
+.9
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.12
+	lda	21
+	cmp	25
+.12
+	jne	.4
+	lda	g_board_+8
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.13
+	lda	21
+	cmp	25
+.13
+	jne	.4
+.5
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.4
+	stx	8
+	stx	9
+	rts
+;}
+.2	equ	0
+.3	equ	2
+;
+;char pos1func()
+;{
+	public	pos1func_
+pos1func_
+	jsr	.csav#
+	fcb	.15
+	fdb	.14
+;    register char x = g_board[1];
+	lda	g_board_+1
+	sta	128
+;    
+;    if ( ( x == g_board[0] && x == g_board[2] ) ||
+;         ( x == g_board[4] && x == g_board[7] ) )
+;        return x;
+	lda	g_board_
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.19
+	lda	21
+	cmp	25
+.19
+	jne	.18
+	lda	g_board_+2
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.20
+	lda	21
+	cmp	25
+.20
+	jeq	.17
+.18
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.21
+	lda	21
+	cmp	25
+.21
+	jne	.16
+	lda	g_board_+7
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.22
+	lda	21
+	cmp	25
+.22
+	jne	.16
+.17
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.16
+	stx	8
+	stx	9
+	rts
+;} 
+.14	equ	0
+.15	equ	2
+;
+;char pos2func()
+;{
+	public	pos2func_
+pos2func_
+	jsr	.csav#
+	fcb	.24
+	fdb	.23
+;    register char x = g_board[2];
+	lda	g_board_+2
+	sta	128
+;    
+;    if ( ( x == g_board[0] && x == g_board[1] ) ||
+;         ( x == g_board[5] && x == g_board[8] ) ||
+;         ( x == g_board[4] && x == g_board[6] ) )
+;        return x;
+	lda	g_board_
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.28
+	lda	21
+	cmp	25
+.28
+	jne	.27
+	lda	g_board_+1
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.29
+	lda	21
+	cmp	25
+.29
+	jeq	.26
+.27
+	lda	g_board_+5
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.31
+	lda	21
+	cmp	25
+.31
+	jne	.30
+	lda	g_board_+8
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.32
+	lda	21
+	cmp	25
+.32
+	jeq	.26
+.30
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.33
+	lda	21
+	cmp	25
+.33
+	jne	.25
+	lda	g_board_+6
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.34
+	lda	21
+	cmp	25
+.34
+	jne	.25
+.26
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.25
+	stx	8
+	stx	9
+	rts
+;} 
+.23	equ	0
+.24	equ	2
+;
+;char pos3func()
+;{
+	public	pos3func_
+pos3func_
+	jsr	.csav#
+	fcb	.36
+	fdb	.35
+;    register char x = g_board[3];
+	lda	g_board_+3
+	sta	128
+;    
+;    if ( ( x == g_board[4] && x == g_board[5] ) ||
+;         ( x == g_board[0] && x == g_board[6] ) )
+;        return x;
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.40
+	lda	21
+	cmp	25
+.40
+	jne	.39
+	lda	g_board_+5
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.41
+	lda	21
+	cmp	25
+.41
+	jeq	.38
+.39
+	lda	g_board_
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.42
+	lda	21
+	cmp	25
+.42
+	jne	.37
+	lda	g_board_+6
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.43
+	lda	21
+	cmp	25
+.43
+	jne	.37
+.38
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.37
+	stx	8
+	stx	9
+	rts
+;} 
+.35	equ	0
+.36	equ	2
+;
+;char pos4func()
+;{
+	public	pos4func_
+pos4func_
+	jsr	.csav#
+	fcb	.45
+	fdb	.44
+;    register char x = g_board[4];
+	lda	g_board_+4
+	sta	128
+;    
+;    if ( ( x == g_board[0] && x == g_board[8] ) ||
+;         ( x == g_board[2] && x == g_board[6] ) ||
+;         ( x == g_board[1] && x == g_board[7] ) ||
+;         ( x == g_board[3] && x == g_board[5] ) )
+;        return x;
+	lda	g_board_
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.49
+	lda	21
+	cmp	25
+.49
+	jne	.48
+	lda	g_board_+8
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.50
+	lda	21
+	cmp	25
+.50
+	jeq	.47
+.48
+	lda	g_board_+2
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.52
+	lda	21
+	cmp	25
+.52
+	jne	.51
+	lda	g_board_+6
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.53
+	lda	21
+	cmp	25
+.53
+	jeq	.47
+.51
+	lda	g_board_+1
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.55
+	lda	21
+	cmp	25
+.55
+	jne	.54
+	lda	g_board_+7
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.56
+	lda	21
+	cmp	25
+.56
+	jeq	.47
+.54
+	lda	g_board_+3
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.57
+	lda	21
+	cmp	25
+.57
+	jne	.46
+	lda	g_board_+5
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.58
+	lda	21
+	cmp	25
+.58
+	jne	.46
+.47
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.46
+	stx	8
+	stx	9
+	rts
+;} 
+.44	equ	0
+.45	equ	2
+;
+;char pos5func()
+;{
+	public	pos5func_
+pos5func_
+	jsr	.csav#
+	fcb	.60
+	fdb	.59
+;    register char x = g_board[5];
+	lda	g_board_+5
+	sta	128
+;    
+;    if ( ( x == g_board[3] && x == g_board[4] ) ||
+;         ( x == g_board[2] && x == g_board[8] ) )
+;        return x;
+	lda	g_board_+3
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.64
+	lda	21
+	cmp	25
+.64
+	jne	.63
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.65
+	lda	21
+	cmp	25
+.65
+	jeq	.62
+.63
+	lda	g_board_+2
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.66
+	lda	21
+	cmp	25
+.66
+	jne	.61
+	lda	g_board_+8
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.67
+	lda	21
+	cmp	25
+.67
+	jne	.61
+.62
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.61
+	stx	8
+	stx	9
+	rts
+;} 
+.59	equ	0
+.60	equ	2
+;
+;char pos6func()
+;{
+	public	pos6func_
+pos6func_
+	jsr	.csav#
+	fcb	.69
+	fdb	.68
+;    register char x = g_board[6];
+	lda	g_board_+6
+	sta	128
+;    
+;    if ( ( x == g_board[7] && x == g_board[8] ) ||
+;         ( x == g_board[0] && x == g_board[3] ) ||
+;         ( x == g_board[4] && x == g_board[2] ) )
+;        return x;
+	lda	g_board_+7
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.73
+	lda	21
+	cmp	25
+.73
+	jne	.72
+	lda	g_board_+8
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.74
+	lda	21
+	cmp	25
+.74
+	jeq	.71
+.72
+	lda	g_board_
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.76
+	lda	21
+	cmp	25
+.76
+	jne	.75
+	lda	g_board_+3
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.77
+	lda	21
+	cmp	25
+.77
+	jeq	.71
+.75
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.78
+	lda	21
+	cmp	25
+.78
+	jne	.70
+	lda	g_board_+2
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.79
+	lda	21
+	cmp	25
+.79
+	jne	.70
+.71
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.70
+	stx	8
+	stx	9
+	rts
+;} 
+.68	equ	0
+.69	equ	2
+;
+;char pos7func()
+;{
+	public	pos7func_
+pos7func_
+	jsr	.csav#
+	fcb	.81
+	fdb	.80
+;    register char x = g_board[7];
+	lda	g_board_+7
+	sta	128
+;    
+;    if ( ( x == g_board[6] && x == g_board[8] ) ||
+;         ( x == g_board[1] && x == g_board[4] ) )
+;        return x;
+	lda	g_board_+6
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.85
+	lda	21
+	cmp	25
+.85
+	jne	.84
+	lda	g_board_+8
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.86
+	lda	21
+	cmp	25
+.86
+	jeq	.83
+.84
+	lda	g_board_+1
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.87
+	lda	21
+	cmp	25
+.87
+	jne	.82
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.88
+	lda	21
+	cmp	25
+.88
+	jne	.82
+.83
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.82
+	stx	8
+	stx	9
+	rts
+;} 
+.80	equ	0
+.81	equ	2
+;
+;char pos8func()
+;{
+	public	pos8func_
+pos8func_
+	jsr	.csav#
+	fcb	.90
+	fdb	.89
+;    register char x = g_board[8];
+	lda	g_board_+8
+	sta	128
+;    
+;    if ( ( x == g_board[6] && x == g_board[7] ) ||
+;         ( x == g_board[2] && x == g_board[5] ) ||
+;         ( x == g_board[0] && x == g_board[4] ) )
+;        return x;
+	lda	g_board_+6
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.94
+	lda	21
+	cmp	25
+.94
+	jne	.93
+	lda	g_board_+7
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.95
+	lda	21
+	cmp	25
+.95
+	jeq	.92
+.93
+	lda	g_board_+2
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.97
+	lda	21
+	cmp	25
+.97
+	jne	.96
+	lda	g_board_+5
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.98
+	lda	21
+	cmp	25
+.98
+	jeq	.92
+.96
+	lda	g_board_
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.99
+	lda	21
+	cmp	25
+.99
+	jne	.91
+	lda	g_board_+4
+	sta	24
+	stx	25
+	lda	128
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	bne	.100
+	lda	21
+	cmp	25
+.100
+	jne	.91
+.92
+	lda	128
+	sta	8
+	stx	9
+	rts
+;    return PieceBlank;
+.91
+	stx	8
+	stx	9
+	rts
+;} 
+.89	equ	0
+.90	equ	2
+;
+;typedef char pfunc_t();
+;
+;pfunc_t * winner_functions[9] =
+	dseg
+	public	winner_functions_
+winner_functions_
+;{
+;    pos0func,
+	fdb	pos0func_
+;    pos1func,
+	fdb	pos1func_
+;    pos2func,
+	fdb	pos2func_
+;    pos3func,
+	fdb	pos3func_
+;    pos4func,
+	fdb	pos4func_
+;    pos5func,
+	fdb	pos5func_
+;    pos6func,
+	fdb	pos6func_
+;    pos7func,
+	fdb	pos7func_
+;    pos8func,
+	fdb	pos8func_
+;};
+	cseg
+;
+;#else /* WinFunPointers */
+;
+;int MinMax( alpha, beta, depth, move ) char alpha; char beta; c
+	public	MinMax_
+MinMax_
+	jsr	.csav#
+	fcb	.102
+	fdb	.101
+;har depth; char move;
+;{
+;alpha = 11
+;beta = 13
+;depth = 15
+;move = 17
+;    char value, pieceMove, score, p;
+;#if WinFunPointers
+;    pfunc_t * pf;
+;#endif
+;
+;    g_Moves++;
+	inc	g_Moves_
+	bne	.103
+	inc	g_Moves_+1
+.103
+;
+;    if ( depth >= 4 )
+;    {
+	ldy	#15
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	24
+	cmp	#4
+	lda	25
+	sbc	#0
+	jlt	.104
+;#if WinFunPointers
+;        /* function pointers are faster on all platforms by 10-
+;20% */
+;
+;        pf = winner_functions[ move ];
+	lda	#1
+	sta	24
+	stx	25
+	ldy	#17
+	lda	(4),Y
+	sta	20
+	stx	21
+	ldy	#20
+	ldx	#24
+	lda	#16
+	jsr	.shl#
+	clc
+	lda	16
+	adc	#<winner_functions_
+	sta	24
+	lda	17
+	adc	#>winner_functions_
+	sta	25
+	lda	(24,X)
+	ldy	#250
+	sta	(6),Y
+	ldy	#1
+	lda	(24),Y
+	ldy	#251
+	sta	(6),Y
+;        p = (*pf)();
+	dey
+	lda	(6),Y
+	sta	8
+	iny
+	lda	(6),Y
+	sta	9
+	jsr	.cpystk2#
+	fcb	2
+	lda	8
+	ldy	#252
+	sta	(6),Y
+;#else
+;
+;        if ( PieceBlank != p )
+;        {
+	lda	(6),Y
+	sta	24
+	stx	25
+	lda	24
+	ora	25
+	jeq	.105
+;            if ( PieceX == p )
+;                return ScoreWin;
+	lda	(6),Y
+	sta	24
+	stx	25
+	lda	24
+	cmp	#1
+	bne	.107
+	lda	25
+	cmp	#0
+.107
+	jne	.106
+	lda	#6
+	sta	8
+	stx	9
+	rts
+;
+;            return ScoreLose;
+.106
+	lda	#4
+	sta	8
+	stx	9
+	rts
+;        }
+;
+;        if ( 8 == depth )
+.105
+;            return ScoreTie;
+	ldy	#15
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	24
+	cmp	#8
+	bne	.109
+	lda	25
+	cmp	#0
+.109
+	jne	.108
+	lda	#5
+	sta	8
+	stx	9
+	rts
+;    }
+.108
+;
+;    if ( depth & 1 ) 
+.104
+;    {
+	ldy	#15
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	24
+	and	#1
+	jeq	.110
+;        value = ScoreMin;
+	lda	#2
+	ldy	#255
+	sta	(6),Y
+;        pieceMove = PieceX;
+	lda	#1
+	dey
+	sta	(6),Y
+;    }
+;    else
+	jmp	.111
+.110
+;    {
+;        value = ScoreMax;
+	lda	#9
+	ldy	#255
+	sta	(6),Y
+;        pieceMove = PieceO;
+	lda	#2
+	dey
+	sta	(6),Y
+;    }
+.111
+;
+;    for ( p = 0; p < 9; p++ )
+	txa
+	ldy	#252
+	sta	(6),Y
+	jmp	.113
+.112
+	clc
+	lda	#1
+	ldy	#252
+	adc	(6),Y
+	sta	(6),Y
+	txa
+	adc	#0
+.113
+	ldy	#252
+	lda	(6),Y
+	sta	24
+	stx	25
+	lda	24
+	cmp	#9
+	lda	25
+	sbc	#0
+	jge	.114
+;    {
+;        if ( PieceBlank == g_board[ p ] )
+;        {
+	lda	(6),Y
+	sta	24
+	stx	25
+	clc
+	lda	24
+	adc	#<g_board_
+	sta	20
+	lda	25
+	adc	#>g_board_
+	sta	21
+	lda	(20,X)
+	sta	24
+	stx	25
+	lda	24
+	ora	25
+	jne	.115
+;            g_board[p] = pieceMove;
+	lda	(6),Y
+	sta	24
+	stx	25
+	clc
+	lda	24
+	adc	#<g_board_
+	sta	20
+	lda	25
+	adc	#>g_board_
+	sta	21
+	ldy	#254
+	lda	(6),Y
+	sta	(20,X)
+;            score = MinMax( alpha, beta, depth + 1, p );
+	ldy	#252
+	lda	(6),Y
+	sta	24
+	stx	25
+	lda	25
+	pha
+	lda	24
+	pha
+	ldy	#15
+	lda	(4),Y
+	sta	24
+	stx	25
+	clc
+	lda	#1
+	adc	24
+	sta	20
+	txa
+	adc	25
+	sta	21
+	lda	21
+	pha
+	lda	20
+	pha
+	ldy	#13
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	25
+	pha
+	lda	24
+	pha
+	ldy	#11
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	25
+	pha
+	lda	24
+	pha
+	jsr	.cpystk#
+	fdb	MinMax_
+	fcb	10
+	lda	8
+	ldy	#253
+	sta	(6),Y
+;            g_board[p] = PieceBlank;
+	dey
+	lda	(6),Y
+	sta	24
+	stx	25
+	clc
+	lda	24
+	adc	#<g_board_
+	sta	20
+	lda	25
+	adc	#>g_board_
+	sta	21
+	txa
+	sta	(20,X)
+;
+;            if ( depth & 1 ) 
+;            {
+	ldy	#15
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	24
+	and	#1
+	jeq	.116
+;#if WinLosePrune   /* #if statements must be in column 0 for MS
+; C 1.0 */
+;                if ( ScoreWin == score )
+;                    return ScoreWin;
+	ldy	#253
+	lda	(6),Y
+	sta	24
+	stx	25
+	lda	24
+	cmp	#6
+	bne	.118
+	lda	25
+	cmp	#0
+.118
+	jne	.117
+	lda	#6
+	sta	8
+	stx	9
+	rts
+;#endif
+;
+;                if ( score > value )
+.117
+;                    value = score;
+	ldy	#255
+	lda	(6),Y
+	sta	24
+	stx	25
+	ldy	#253
+	lda	(6),Y
+	sta	20
+	stx	21
+	lda	24
+	cmp	20
+	lda	25
+	sbc	21
+	jge	.119
+	lda	(6),Y
+	ldy	#255
+	sta	(6),Y
+;
+;#if ABPrune
+;                if ( value > alpha )
+.119
+;                    alpha = value;
+	ldy	#11
+	lda	(4),Y
+	sta	24
+	stx	25
+	ldy	#255
+	lda	(6),Y
+	sta	20
+	stx	21
+	lda	24
+	cmp	20
+	lda	25
+	sbc	21
+	jge	.120
+	lda	(6),Y
+	ldy	#11
+	sta	(4),Y
+;
+;                if ( alpha >= beta )
+.120
+;                    return value;
+	ldy	#13
+	lda	(4),Y
+	sta	24
+	stx	25
+	ldy	#11
+	lda	(4),Y
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	lda	21
+	sbc	25
+	jlt	.121
+	ldy	#255
+	lda	(6),Y
+	sta	8
+	stx	9
+	rts
+;#endif
+;            }
+.121
+;            else
+	jmp	.122
+.116
+;            {
+;#if WinLosePrune
+;                if ( ScoreLose == score )
+;                    return ScoreLose;
+	ldy	#253
+	lda	(6),Y
+	sta	24
+	stx	25
+	lda	24
+	cmp	#4
+	bne	.124
+	lda	25
+	cmp	#0
+.124
+	jne	.123
+	lda	#4
+	sta	8
+	stx	9
+	rts
+;#endif
+;
+;                if ( score < value )
+.123
+;                    value = score;
+	ldy	#255
+	lda	(6),Y
+	sta	24
+	stx	25
+	ldy	#253
+	lda	(6),Y
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	lda	21
+	sbc	25
+	jge	.125
+	lda	(6),Y
+	ldy	#255
+	sta	(6),Y
+;
+;#if ABPrune
+;                if ( value < beta )
+.125
+;                    beta = value;
+	ldy	#13
+	lda	(4),Y
+	sta	24
+	stx	25
+	ldy	#255
+	lda	(6),Y
+	sta	20
+	stx	21
+	lda	20
+	cmp	24
+	lda	21
+	sbc	25
+	jge	.126
+	lda	(6),Y
+	ldy	#13
+	sta	(4),Y
+;
+;                if ( beta <= alpha )
+.126
+;                    return value;
+	ldy	#11
+	lda	(4),Y
+	sta	24
+	stx	25
+	ldy	#13
+	lda	(4),Y
+	sta	20
+	stx	21
+	lda	24
+	cmp	20
+	lda	25
+	sbc	21
+	jlt	.127
+	ldy	#255
+	lda	(6),Y
+	sta	8
+	stx	9
+	rts
+;#endif
+;            }
+.127
+.122
+;        }
+;    }
+.115
+	jmp	.112
+.114
+;
+;    return value;
+	ldy	#255
+	lda	(6),Y
+	sta	8
+	stx	9
+	rts
+;}  /*MinMax*/
+.101	equ	-6
+.102	equ	0
+;
+;int FindSolution( position ) char position;
+	public	FindSolution_
+FindSolution_
+	jsr	.csav#
+	fcb	.129
+	fdb	.128
+;{
+;position = 11
+;    g_board[ position ] = PieceX;
+	ldy	#11
+	lda	(4),Y
+	sta	24
+	stx	25
+	clc
+	lda	24
+	adc	#<g_board_
+	sta	20
+	lda	25
+	adc	#>g_board_
+	sta	21
+	lda	#1
+	sta	(20,X)
+;    MinMax( ScoreMin, ScoreMax, 0, position );
+	lda	(4),Y
+	sta	24
+	stx	25
+	lda	25
+	pha
+	lda	24
+	pha
+	txa
+	pha
+	pha
+	pha
+	lda	#9
+	pha
+	txa
+	pha
+	lda	#2
+	pha
+	jsr	.cpystk#
+	fdb	MinMax_
+	fcb	10
+;    g_board[ position ] = PieceBlank;
+	ldy	#11
+	lda	(4),Y
+	sta	24
+	stx	25
+	clc
+	lda	24
+	adc	#<g_board_
+	sta	20
+	lda	25
+	adc	#>g_board_
+	sta	21
+	txa
+	sta	(20,X)
+;
+;    return 0;
+	stx	8
+	stx	9
+	rts
+;} /*FindSolution*/
+.128	equ	0
+.129	equ	0
+;
+;void show_int( val ) int val;
+	public	show_int_
+show_int_
+	jsr	.csav#
+	fcb	.131
+	fdb	.130
+;{
+;val = 11
+;    int * pi = (int *) 0xc0;  
+	lda	#192
+	ldy	#254
+	sta	(6),Y
+	txa
+	iny
+	sta	(6),Y
+;    *pi = val;
+	dey
+	lda	(6),Y
+	sta	24
+	iny
+	lda	(6),Y
+	sta	25
+	ldy	#11
+	lda	(4),Y
+	sta	(24,X)
+	iny
+	lda	(4),Y
+	ldy	#1
+	sta	(24),Y
+;
+;    #asm
+        lda     $c1          /* print the high byte first */
+        jsr     $ffdc
+        lda     $c0
+        jsr     $ffdc
+;} /*show_int*/
+	rts
+.130	equ	-2
+.131	equ	0
+;
+;void show_long( val ) long val;
+	public	show_long_
+show_long_
+	jsr	.csav#
+	fcb	.133
+	fdb	.132
+;{
+;val = 11
+;    long * pl = (long *) 0xc0; 
+	lda	#192
+	ldy	#254
+	sta	(6),Y
+	txa
+	iny
+	sta	(6),Y
+;    *pl = val;
+	dey
+	lda	(6),Y
+	sta	24
+	iny
+	lda	(6),Y
+	sta	25
+	ldy	#11
+	lda	(4),Y
+	sta	(24,X)
+	iny
+	lda	(4),Y
+	ldy	#1
+	sta	(24),Y
+	ldy	#13
+	lda	(4),Y
+	ldy	#2
+	sta	(24),Y
+	ldy	#14
+	lda	(4),Y
+	ldy	#3
+	sta	(24),Y
+;
+;    #asm
+        lda     $c3          /* print the high byte first */
+        jsr     $ffdc
+        lda     $c2          /* print the high byte first */
+        jsr     $ffdc
+        lda     $c1
+        jsr     $ffdc
+        lda     $c0
+        jsr     $ffdc
+;} /*show_long*/
+	rts
+.132	equ	-2
+.133	equ	0
+;
+;void show_char( val ) char val;
+	public	show_char_
+show_char_
+	jsr	.csav#
+	fcb	.135
+	fdb	.134
+;{
+;val = 11
+;    char * pc = (char *) 0xc0;
+	lda	#192
+	ldy	#254
+	sta	(6),Y
+	txa
+	iny
+	sta	(6),Y
+;    *pc = val;
+	dey
+	lda	(6),Y
+	sta	24
+	iny
+	lda	(6),Y
+	sta	25
+	ldy	#11
+	lda	(4),Y
+	sta	(24,X)
+;
+;    #asm
+        lda     $c0
+        jsr     $ffef
+;} /*show_char*/
+	rts
+.134	equ	-2
+.135	equ	0
+;
+;void show_string( str ) char * str;
+	public	show_string_
+show_string_
+	jsr	.csav#
+	fcb	.137
+	fdb	.136
+;{
+;str = 11
+;    while ( *str )
+.138
+	ldy	#11
+	lda	(4),Y
+	sta	24
+	iny
+	lda	(4),Y
+	sta	25
+	lda	(24,X)
+	jeq	.139
+;    {
+;        show_char( *str );
+	dey
+	lda	(4),Y
+	sta	24
+	iny
+	lda	(4),Y
+	sta	25
+	lda	(24,X)
+	sta	20
+	stx	21
+	lda	21
+	pha
+	lda	20
+	pha
+	jsr	.cpystk#
+	fdb	show_char_
+	fcb	4
+;        str++;
+	clc
+	tya
+	ldy	#11
+	adc	(4),Y
+	sta	(4),Y
+	txa
+	iny
+	adc	(4),Y
+	sta	(4),Y
+;    }
+	jmp	.138
+.139
+;} /*show_string*/
+	rts
+.136	equ	0
+.137	equ	0
+;
+;void bye()
+;{
+	public	bye_
+bye_
+	jsr	.csav#
+	fcb	.141
+	fdb	.140
+;    #asm
+        jsr $ff1f
+;} /*bye*/
+	rts
+.140	equ	0
+.141	equ	0
+;
+;int main()
+;{
+	public	main_
+main_
+	jsr	.csav#
+	fcb	.143
+	fdb	.142
+;    int i;
+;
+;    for ( i = 0; i < 9; i++ )
+	ldy	#254
+	sta	(6),Y
+	iny
+	sta	(6),Y
+	jmp	.145
+.144
+	clc
+	lda	#1
+	ldy	#254
+	adc	(6),Y
+	sta	(6),Y
+	txa
+	iny
+	adc	(6),Y
+	sta	(6),Y
+.145
+	ldy	#254
+	lda	(6),Y
+	cmp	#9
+	iny
+	lda	(6),Y
+	sbc	#0
+	jge	.146
+;        g_board[ i ] = PieceBlank;
+	clc
+	dey
+	lda	(6),Y
+	adc	#<g_board_
+	sta	24
+	iny
+	lda	(6),Y
+	adc	#>g_board_
+	sta	25
+	txa
+	sta	(24,X)
+	jmp	.144
+.146
+;
+;    for ( i = 0; i < g_Iterations; i++ )
+	txa
+	ldy	#254
+	sta	(6),Y
+	iny
+	sta	(6),Y
+	jmp	.148
+.147
+	clc
+	lda	#1
+	ldy	#254
+	adc	(6),Y
+	sta	(6),Y
+	txa
+	iny
+	adc	(6),Y
+	sta	(6),Y
+.148
+	ldy	#254
+	lda	(6),Y
+	cmp	g_Iterations_
+	iny
+	lda	(6),Y
+	sbc	g_Iterations_+1
+	jge	.149
+;    {
+;        g_Moves = 0;
+	stx	g_Moves_
+	stx	g_Moves_+1
+;        FindSolution( 0 );
+	txa
+	pha
+	pha
+	jsr	.cpystk#
+	fdb	FindSolution_
+	fcb	4
+;        FindSolution( 1 );
+	pha
+	tya
+	pha
+	jsr	.cpystk#
+	fdb	FindSolution_
+	fcb	4
+;        FindSolution( 4 );
+	pha
+	lda	#4
+	pha
+	jsr	.cpystk#
+	fdb	FindSolution_
+	fcb	4
+;    }
+	jmp	.147
+.149
+;
+;    show_int( g_Moves );
+	lda	g_Moves_+1
+	pha
+	lda	g_Moves_
+	pha
+	jsr	.cpystk#
+	fdb	show_int_
+	fcb	4
+;    show_char( '$' );
+	pha
+	lda	#36
+	pha
+	jsr	.cpystk#
+	fdb	show_char_
+	fcb	4
+;
+;    /* The C runtime doesn't know how to exit or even return to
+; the entry proc
+;       on an Apple 1, so exit with bye() */
+;
+;    bye();
+	jsr	.cpystk#
+	fdb	bye_
+	fcb	2
+;
+;    return 0;
+	stx	8
+	stx	9
+	rts
+;} /*main*/
+.142	equ	-2
+.143	equ	0
+;
+	dseg
+	cseg
+	end

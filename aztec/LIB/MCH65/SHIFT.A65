@@ -1,0 +1,65 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+	public	.shl
+.shl	jsr	copy		;y << x -> a
+	tya
+	beq	shl2
+shl1	asl	0,X
+	rol	1,X
+	dey
+	bne	shl1
+	tya
+shl2	tax
+	iny
+	rts
+
+	public	.asr
+.asr	jsr	copy		;y >> x -> a
+	bpl	lsr1
+	tya
+	beq	asr2
+asr1	sec
+	ror	1,X
+	ror	0,X
+	dey
+	bne	asr1
+	tya
+asr2	tax
+	iny
+	rts
+
+	public	.lsr
+.lsr	jsr	copy		;y >> x -> a
+lsr1	tya
+	beq	lsr3
+lsr2	lsr	1,X
+	ror	0,X
+	dey
+	bne	lsr2
+	tya
+lsr3	tax
+	iny
+	rts
+
+copy	stx	VAL
+	tax
+	lda	0,Y
+	sta	0,X
+	lda	1,Y
+	sta	1,X
+	php
+	ldy	VAL
+	lda	1,Y
+	beq	copy1
+	ldy	#16
+	plp
+	rts
+copy1	lda	0,Y
+	tay
+	plp
+	rts
+

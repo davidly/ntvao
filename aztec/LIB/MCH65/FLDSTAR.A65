@@ -1,0 +1,115 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	on entry:	Acc - field length
+*			X   - field pos
+*			Y   - pointer to field
+*
+	public	.ldfldu
+.ldfldu
+	pha
+	lda	0,Y		;get the pointer to the field
+	sta	VAL
+	lda	1,Y
+	sta	VAL+1
+	ldy	#0
+	lda	(VAL),Y		;get the whole field into R0
+	sta	R0
+	iny
+	lda	(VAL),Y
+	sta	R0+1
+	txa			;now, shift to the pos
+	beq	ldf2
+ldf1	lsr	R0+1
+	ror	R0
+	dex
+	bne	ldf1
+ldf2	pla			;get back the length
+	jsr	setmask		;make the proper mask
+	lda	R0		;mask off unwanted bits
+	and	R0+2
+	sta	R0
+	lda	R0+1
+	and	R0+3
+	sta	R0+1
+	lda	#0		;fix registers
+	tax
+	ldy	#1
+	rts			;and all done
+
+	public	.ldfld
+.ldfld
+	jsr	.ldfldu
+	lda	R0+3
+	eor	#$ff
+	sta	R0+3
+	lsr	A
+	and	R0+1
+	sta	VAL
+	lda	R0+2
+	eor	#$ff
+	sta	R0+2
+	ror	A
+	and	R0
+	ora	VAL
+	beq	ldfld1
+	lda	R0
+	ora	R0+2
+	sta	R0
+	lda	R0+1
+	ora	R0+3
+	sta	R0+1
+ldfld1	txa
+	rts
+
+	public	.stfld
+.stfld
+	pha
+	lda	0,Y		;get the pointer to the field
+	sta	VAL
+	lda	1,Y
+	sta	VAL+1
+	pla			;get the mask
+	jsr	setmask
+	txa			;shift the field
+	beq	stf2		;jd 6/18/86
+stf1	asl	R0
+	rol	R0+1
+	asl	R0+2
+	rol	R0+3
+	dex
+	bne	stf1
+stf2	lda	R0		;isolate the field
+	and	R0+2
+	sta	R0
+	lda	R0+1
+	and	R0+3
+	sta	R0+1
+	iny
+stf3	lda	R0+2,Y		;get mask
+	eor	#$ff		;complement
+	and	(VAL),Y		;get part of field we need
+	ora	R0,Y		;put in field
+	sta	(VAL),Y		;and put back
+	dey
+	bpl	stf3
+	txa			;reset registers
+	ldy	#1
+	rts			;and return
+
+
+setmask
+	tay
+	lda	#0
+	sta	R0+2
+	sta	R0+3
+set1	sec
+	rol	R0+2
+	rol	R0+3
+	dey
+	bne	set1
+	rts
+

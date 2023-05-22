@@ -1,0 +1,227 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+T0	equ	TMP+4
+T1	equ	TMP+8
+*
+	public	.mulx		; x * y -> a (long)
+.mulx	jsr	cpyx
+	pha
+	sty	TMP
+	sty	TMP+1
+	sty	TMP+2
+	sty	TMP+3
+	ldy	#$20
+lm1	lda	T1
+	lsr	A
+	bcc	lm3
+	sty	VAL
+	clc
+	ldy	#4
+	ldx	#0
+lm2	lda	TMP,X
+	adc	T0,X
+	sta	TMP,X
+	inx
+	dey
+	bne	lm2
+	ldy	VAL
+lm3	lsr	TMP+3
+	ror	TMP+2
+	ror	TMP+1
+	ror	TMP
+	ror	T1+3
+	ror	T1+2
+	ror	T1+1
+	ror	T1
+	dey
+	bne	lm1
+	pla
+	tax
+	ldy	#4
+lm4	lda	T1-1,Y
+	sta	3,X
+	dex
+	dey
+	bne	lm4
+
+restor	ldx	#11
+rest1	pla
+	sta	TMP,X
+	dex
+	bpl	rest1
+	inx
+	txa
+	ldy	#1
+	rts
+
+	public	.udvx		; unsigned y / x -> a
+.udvx	jsr	cpyx		; jd 6/16/86 - added .udvx routine
+	jsr	ldv
+	tax
+	lda	#0
+	sta	VAL
+	php			
+	jmp	divx1
+
+	public	.divx		; y / x  -> a
+.divx	jsr	cpyx
+	jsr	ldv
+	tax
+	sec
+	php			;jd 6/16/86 save C flag
+
+divx1	lda	VAL
+	bpl	divx2
+	plp			;jd 6/16/86 get C flag from last subtract
+	lda	#0
+	sbc	T1,Y
+	php			;jd 6/16/86 save C flag
+	bvc	divx3
+divx2	lda	T1,Y
+divx3	sta	0,X
+	inx
+	iny
+	cpy	#4
+	bne	divx1
+	plp			;jd 6/16/86 get rid of last C flag
+	jmp	restor
+
+	public	.umdx		;unsigned y % x -> a
+.umdx	jsr	cpyx		;jd 6/16/86 - added .umdx routine
+	jsr	ldv
+	tax
+	lda	#0
+	sta	VAL
+	php
+	jmp	modx1
+
+	public	.modx		; y % x -> a
+.modx	jsr	cpyx
+	jsr	ldv
+	tax
+	sec
+	php			;jd 6/16/86 save C flag
+
+modx1	lda	VAL+1
+	bpl	modx2
+	plp			;jd 6/16/86 get last C flag
+	lda	#0
+	sbc	TMP,Y
+	php			;jd 6/16/86 save C flag
+	bvc	modx3
+modx2	lda	TMP,Y
+modx3	sta	0,X
+	inx
+	iny
+	cpy	#4
+	bne	modx1
+	plp			;jd 6/16/86 get rid of last C flag
+	jmp	restor
+
+ldv	pha
+	sty	TMP
+	sty	TMP+1
+	sty	TMP+2
+	sty	TMP+3
+	lda	T1+3
+	sta	VAL+1
+	eor	T0+3
+	sta	VAL
+	lda	T0+3
+	bpl	ldv2
+	sec
+	ldy	#4
+	ldx	#0
+ldv1	lda	#0
+	sbc	T0,X
+	sta	T0,X
+	inx
+	dey
+	bne	ldv1
+ldv2	lda	T1+3
+	bpl	ldv4
+	sec
+	ldy	#4
+	ldx	#0
+ldv3	lda	#0
+	sbc	T1,X
+	sta	T1,X
+	inx
+	dey
+	bne	ldv3
+ldv4	ldy	#$20
+ld1	asl	T1
+	rol	T1+1
+	rol	T1+2
+	rol	T1+3
+	rol	TMP
+	rol	TMP+1
+	rol	TMP+2
+	rol	TMP+3
+	sec
+	lda	TMP
+	sbc	T0
+	pha
+	lda	TMP+1
+	sbc	T0+1
+	pha
+	lda	TMP+2
+	sbc	T0+2
+	tax
+	lda	TMP+3
+	sbc	T0+3
+	bcc	ld2
+	sta	TMP+3
+	stx	TMP+2
+	pla
+	sta	TMP+1
+	pla
+	sta	TMP
+	inc	T1
+	bne	ld3
+ld2	pla
+	pla
+ld3	dey
+	bne	ld1
+	pla
+	rts
+
+cpyx	
+	stx	VAL
+	sta	VAL+1
+	tax
+	pla
+	sta	0,X
+	pla
+	sta	1,X
+	ldx	#0
+cpyx0	lda	TMP,X
+	pha
+	inx
+	cpx	#12
+	bne	cpyx0
+	ldx	#4
+cpyx1	lda	3,Y
+	sta	T1-1,X
+	dey
+	dex
+	bne	cpyx1
+	ldx	VAL
+	ldy	#4
+cpyx2	lda	3,X
+	sta	T0-1,Y
+	dex
+	dey
+	bne	cpyx2
+	ldx	VAL+1
+	lda	1,X
+	pha
+	lda	0,X
+	pha
+	txa
+	rts
+

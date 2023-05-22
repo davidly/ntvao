@@ -1,0 +1,26 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+REL=  device.r devtab.r gdev.r ioctl.r tmpdev.r
+
+INT= device.r devtab.i gdev.r ioctl.i
+
+SRC= device.c devtab.c gdev.a65 ioctl.c tmpdev.c
+
+rel: $(REL)
+	echo done
+
+int: $(INT)
+	echo done

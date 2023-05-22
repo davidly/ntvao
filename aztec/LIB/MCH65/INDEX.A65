@@ -1,0 +1,45 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	char *
+*	index(str, c)
+*	  char *str;
+*	  int c;
+*
+*	returns a pointer to the first occurrence of c in s
+*
+
+STR	equ	R0+2
+C	equ	R0+4
+
+	public	index_
+index_
+	ldy	#4		;copy params to zero page
+index1	lda	(SP),Y
+	sta	R0,Y
+	dey
+	bne	index1
+index2	lda	(STR),Y
+	beq	index3
+	cmp	C
+	beq	index4
+	iny
+	bne	index2
+	inc	STR+1
+	bne	index2
+index3	lda	#0
+	sta	R0
+	sta	R0+1
+	rts
+index4	clc
+	tya
+	adc	STR
+	sta	R0
+	lda	#0
+	adc	STR+1
+	sta	R0+1
+	rts
+

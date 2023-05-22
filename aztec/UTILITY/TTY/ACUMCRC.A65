@@ -1,0 +1,65 @@
+*:ts=8
+
+	instxt	<zpage.h>
+
+AL	EQU	12
+B	EQU	13
+C	EQU	14
+H	EQU	15
+L	EQU	16
+
+	global	crclow_,2
+	global	crchigh_,2
+*
+	public acumcrc_
+acumcrc_
+	ldy	#2
+	lda	(SP),Y
+	sta	AL
+	ldy	#0
+	sty	B
+	sty	C
+	lda	AL
+	eor	crchigh_
+	sta	AL
+X0	asl	A
+	bcc	X1
+	iny
+X1	tax
+	bne	X0
+	tya
+	and	#1
+	beq	X2
+	sta	C
+	lda	#$80
+	sta	B
+X2	lsr	AL
+	txa
+	ror	A
+	ora	AL
+	sta	L
+	lsr	A
+	stx	AL
+	ror	AL
+	ora	AL
+	and	#$C0
+	eor	C
+	sta	H
+	lda	L
+	and	#$80
+	eor	H
+	eor	crclow_
+	sta	crchigh_
+	lda	L
+	and	#$7F
+	sta	L
+	lsr	A
+	eor	L
+	eor	B
+	sta	L
+	lda	B
+	lsr	A
+	eor	L
+	sta	crclow_
+	rts
+

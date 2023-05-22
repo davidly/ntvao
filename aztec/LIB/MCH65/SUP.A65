@@ -1,0 +1,97 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+	public	.csav
+.csav	pla			;put return addr in R0
+	sta	R0
+	pla
+	sta	R0+1
+	clc
+	pla
+	adc	#1
+	sta	VAL
+	pla
+	adc	#0
+	sta	VAL+1
+	ldy	#7		;save old SP and old FRAME
+	sec
+	lda	SP		;drop SP by frame size
+	sbc	#9
+	sta	R1		;and save temporarily in R1
+	lda	SP+1
+	sbc	#0
+	sta	R1+1
+csav1	lda	VAL,Y
+	sta	(R1),Y
+	dey
+	bpl	csav1
+	ldy	#1
+	sec
+	lda	R1		;drop SP by register size
+	sta	AFRAME		;move to AFRAME first
+	sbc	(R0),Y
+	sta	LFRAME
+	lda	R1+1
+	sta	AFRAME+1
+	sbc	#0
+	sta	LFRAME+1
+	lda	(R0),Y
+	ldy	#8
+	sta	(AFRAME),Y
+	tay
+	beq	csav3
+	dey
+csav2	lda	REGS,Y
+	sta	(LFRAME),Y
+	dey
+	bpl	csav2
+csav3	ldy	#2		;now adjust SP for locals
+	clc
+	lda	LFRAME
+	adc	(R0),Y
+	sta	SP
+	iny
+	lda	LFRAME+1
+	adc	(R0),Y
+	sta	SP+1
+	dec	LFRAME+1
+	clc
+	lda	R0
+	adc	#4
+	sta	R0
+	bcc	csav4
+	inc	R0+1
+csav4	lda	#>.cret-1
+	pha
+	lda	#<.cret-1
+	pha
+	lda	#0
+	tax
+	ldy	#1
+	jmp	(R0)
+*
+	public	.cret
+.cret	inc	LFRAME+1
+	ldy	#8
+	lda	(AFRAME),Y
+	tay
+	beq	cret2
+	dey
+cret1	lda	(LFRAME),Y
+	sta	REGS,Y
+	dey
+	bpl	cret1
+cret2	lda	AFRAME
+	sta	R1
+	lda	AFRAME+1
+	sta	R1+1
+	ldy	#7
+cret3	lda	(R1),Y
+	sta	VAL,Y
+	dey
+	bpl	cret3
+	jmp	(VAL)
+*

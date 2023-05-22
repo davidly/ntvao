@@ -1,0 +1,31 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+SRC= fldstar.a65 flt.a65 fstswt.a65 index.a65 strchr.a65 interp.a65\
+	istack.a65 lmath.a65 longs.a65 lshift.a65 math.a65\
+	move.a65 movmem.a65 rindex.a65 strrchr.a65 setjmp.a65 setmem.a65\
+	shift.a65 stack.a65 strcat.a65 strcmp.a65 strcpy.a65 strequ.a65\
+	strlen.a65 strncat.a65 strncmp.a65 strncpy.a65 sup.a65\
+	swapmem.a65 swit.a65 tmpsav.a65 
+
+REL= fldstar.r flt.r fstswt.r index.r strchr.r interp.r\
+	istack.r lmath.r longs.r lshift.r math.r\
+	move.r movmem.r rindex.r strrchr.r setjmp.r setmem.r\
+	shift.r stack.r strcat.r strcmp.r strcpy.r strequ.r\
+	strlen.r strncat.r strncmp.r strncpy.r sup.r\
+	swapmem.r swit.r tmpsav.r
+
+rel: $(REL)
+	echo done

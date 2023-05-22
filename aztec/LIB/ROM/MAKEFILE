@@ -1,0 +1,35 @@
+.SUFFIXES: .c .a65 .o .i .r .r86
+
+.c.o:
+	cc -c $*.c
+
+.c.r86:
+	cc -o $*.r86 $*.c
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+rel: rom.r umain.r
+	echo done
+
+int: rom.r umain.i
+	echo done
+
+rom.r: rom.a65
+	as65 -o rom.r rom.a65
+
+hex65: hex65.o
+	cc -o hex65 hex65.o 
+
+hex65.exe: hex65.r86
+	ln hex65.r86 -lc

@@ -1,0 +1,38 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.asm
+	sqz65 $*.r
+
+REL= agetc.r aputc.r fdopen.r fgets.r fopen.r fprintf.r\
+	fputs.r fread.r fscanf.r fseek.r fwrite.r getbuff.r getc.r\
+	getchar.r gets.r getw.r mktemp.r printf.r putc.r\
+	putchar.r puterr.r puts.r putw.r scanf.r setbuf.r\
+	tmpfile.r tmpnam.r ungetc.r
+
+INT= agetc.i aputc.i fdopen.i fgets.i fopen.i fprintf.i\
+	fputs.i fread.i fscanf.i fseek.i fwrite.i getbuff.i getc.i\
+	getchar.i gets.i getw.i mktemp.i printf.i putc.i\
+	putchar.i puterr.i puts.i putw.i scanf.i setbuf.i\
+	tmpfile.i tmpnam.i ungetc.i
+
+SRC= agetc.c aputc.c fdopen.c fgets.c fopen.c fprintf.c\
+	fputs.c fread.c fscanf.c fseek.c fwrite.c getbuff.c getc.c\
+	getchar.c gets.c getw.c mktemp.c printf.c putc.c\
+	putchar.c puterr.c puts.c putw.c scanf.c setbuf.c\
+	tempnam.c tmpfile.c tmpnam.c ungetc.c
+
+rel: $(REL)
+	echo done
+
+int: $(INT)
+	echo done

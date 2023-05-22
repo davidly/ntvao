@@ -1,0 +1,200 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+T0	equ	TMP+2
+T1	equ	TMP+4
+*
+	public	.mul		; x * y -> a
+.mul	jsr	cpyx
+	pha
+	sty	TMP
+	sty	TMP+1
+	ldy	#16
+lm1	lda	T1
+	lsr	A
+	bcc	lm2
+	clc
+	lda	TMP
+	adc	T0
+	sta	TMP
+	lda	TMP+1
+	adc	T0+1
+	sta	TMP+1
+lm2	lsr	TMP+1
+	ror	TMP
+	ror	T1+1
+	ror	T1
+	dey
+	bne	lm1
+	pla
+	tax
+	lda	T1
+	sta	0,X
+	lda	T1+1
+	sta	1,X
+
+restor	ldx	#5		;put back the six bytes we saved
+rest1	pla
+	sta	TMP,X
+	dex
+	bpl	rest1
+	inx			;set registers
+	txa
+	ldy	#1
+	rts			;and return
+
+	public	.div		; y / x  -> a
+.div	jsr	cpyx
+	jsr	ldv
+	tax
+	sec
+	php			;jd 6/16/86
+
+divx1	lda	VAL
+	bpl	divx2
+	plp			;jd 6/16/86 get C flag from last subtract
+	lda	#0
+	sbc	T1,Y
+	php			;jd 6/16/86 save C flag of this subtract
+	bvc	divx3
+divx2	lda	T1,Y
+divx3	sta	0,X
+	inx
+	iny
+	cpy	#2
+	bne	divx1
+	plp			;jd 6/16/86 get rid of last saved flags byte
+	jmp	restor
+
+	public	.udv		; y / x  -> a
+.udv	jsr	cpyx
+	jsr	uldv
+	tax
+	lda	T1
+	sta	0,X
+	lda	T1+1
+	sta	1,X
+	jmp	restor
+
+	public	.umd		; y % x -> a
+.umd	jsr	cpyx
+	jsr	uldv
+	tax
+	lda	TMP
+	sta	0,X
+	lda	TMP+1
+	sta	1,X
+	jmp	restor
+
+
+	public	.mod		; y % x -> a
+.mod	jsr	cpyx
+	jsr	ldv
+	tax
+	sec
+	php			;jd 6/16/86
+
+modx1	lda	VAL+1
+	bpl	modx2
+	plp			;jd 6/16/86 get C flag from last subtract
+	lda	#0
+	sbc	TMP,Y
+	php			;jd 6/16/86 save C flag
+	bvc	modx3
+modx2	lda	TMP,Y
+modx3	sta	0,X
+	inx
+	iny
+	cpy	#2
+	bne	modx1
+	plp			;jd 6/16/86 get rid of saved flags
+	jmp	restor
+
+uldv	pha			;save result pointer
+	jmp	ldv2
+
+ldv	pha
+	lda	T1+1
+	sta	VAL+1
+	eor	T0+1
+	sta	VAL
+	lda	T0+1
+	bpl	ldv1
+	sec
+	tya
+	sbc	T0
+	sta	T0
+	tya
+	sbc	T0+1
+	sta	T0+1
+ldv1	lda	T1+1
+	bpl	ldv2
+	sec
+	tya
+	sbc	T1
+	sta	T1
+	tya
+	sbc	T1+1
+	sta	T1+1
+
+ldv2	ldy	#0		;init TMP to 0
+	sty	TMP
+	sty	TMP+1
+	ldy	#16		;do 16 bit divide
+ld1	asl	T1
+	rol	T1+1
+	rol	TMP
+	rol	TMP+1
+	sec
+	lda	TMP
+	sbc	T0
+	tax
+	lda	TMP+1
+	sbc	T0+1
+	bcc	ld2
+	sta	TMP+1
+	stx	TMP
+	inc	T1
+ld2	dey
+	bne	ld1
+	pla			;restore pointer to result
+	rts
+
+	dseg
+ret	rmb	2		;place to save return for a moment
+
+	cseg
+;	save registers and set up for operations
+cpyx	
+	stx	VAL
+	sta	VAL+1
+	pla
+	sta	ret
+	pla
+	sta	ret+1	;save the return address
+	ldx	#0
+cpyx0	lda	TMP,X	;save six bytes of temporary space
+	pha
+	inx
+	cpx	#6
+	bne	cpyx0
+	lda	0,Y	;copy Y value to T1
+	sta	T1
+	lda	1,Y
+	sta	T1+1
+	ldx	VAL	;copy X value to T0
+	lda	0,X
+	sta	T0
+	lda	1,X
+	sta	T0+1
+	lda	ret+1	;put back return address
+	pha
+	lda	ret
+	pha
+	lda	VAL+1	;get back result pointer
+	ldy	#0
+	rts		;and return
+

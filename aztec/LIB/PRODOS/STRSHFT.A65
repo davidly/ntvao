@@ -1,0 +1,67 @@
+*:ts=8
+*
+* Copyright (C) 1984,85 by Manx Software Systems
+*
+
+	instxt	<zpage.h>
+
+*	Convert C string to a Pascal string
+
+	public	ctop_
+ctop_
+	ldy	#2
+	lda	(SP),Y			;get ptr into R0
+	sta	R0
+	iny
+	lda	(SP),Y
+	sta	R0+1
+	ldy	#0
+*
+.1
+	lda	(R0),Y			;find strlen
+	iny
+	cmp #0
+	bne .1
+*
+	dey
+	beq .3			;len = 0
+	sty	R1			;strlen
+.2
+	dey
+	lda (R0),Y
+	iny
+	sta (R0),Y
+	dey
+	bne .2
+*
+	lda R1
+	sta (R0),Y
+.3
+	rts
+*
+	public	ptoc_
+ptoc_
+	ldy	#2
+	lda	(SP),Y
+	sta	R0
+	iny
+	lda	(SP),Y
+	sta	R0+1
+	ldy	#0
+*
+	lda (R0),Y		;strlen
+	beq .5
+	sta R1
+	ldy #0
+.4
+	iny
+	lda	(R0),Y
+	dey
+	sta	(R0),Y
+	iny
+	cpy R1
+	bne .4
+	lda #0
+	sta (R0),Y
+.5
+	rts

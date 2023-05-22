@@ -1,0 +1,80 @@
+*:ts=8
+*
+* Copyright (C) 1982,83,84,85 by Manx Software Systems, Inc.
+*
+
+	instxt	<zpage.h>
+
+	global	_Top_,2
+	global	_mbot_,2
+
+	dseg
+	public	MEMRY
+MEMRY	rmb	2
+	public	_Stksiz_
+_Stksiz_
+	fdb	$0800		;default stack size is 2K
+	public	_End_
+_End_
+	fdb	$0001		;force into inited data space
+
+	cseg
+	public	_Uorg_,_Uend_,_Corg_
+
+	public	.begin
+	entry	.begin
+.begin	cld
+	lda	#>_Corg_
+	cmp	#$20		;check system load address
+	bne	notsys
+	lda	#$fe
+	ldx	#$be		;just below system global page
+	bne	put
+notsys	lda	$E000		;check basic type
+	cmp	#$20		;is it integer?
+	bne	chkap		;no, check applesoft
+	lda	$4C		;get integer HIMEM
+	ldx	$4D
+	bne	put
+chkap	lda	$73		;get applesoft HIMEM
+	ldx	$74
+put	sta	SP		;save in stack pointer
+	sta	_End_
+	stx	SP+1
+	stx	_End_+1
+	lda	#<_Uorg_	;clear out bss space
+	sta	VAL
+	lda	#>_Uorg_
+	sta	VAL+1
+	ldy	#0
+loop	tya
+	sta	(VAL),Y
+	inc	VAL
+	bne	skip
+	inc	VAL+1
+skip	lda	VAL
+	cmp	#<_Uend_
+	bne	loop
+	lda	VAL+1
+	cmp	#>_Uend_
+	bne	loop
+	lda	MEMRY		;set end of program for alloc routines
+	sta	_Top_
+	sta	_mbot_
+	lda	MEMRY+1
+	sta	_Top_+1
+	sta	_mbot_+1
+	lda	#<acc		;init pointers for floating point registers
+	sta	ACC
+	lda	#>acc
+	sta	ACC+1
+	lda	#<sec
+	sta	SEC
+	lda	#>sec
+	sta	SEC+1
+	jmp	_main_#
+
+	dseg
+	global	acc,14		;space reserved for floating point registers
+	global	sec,14
+*

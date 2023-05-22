@@ -1,0 +1,274 @@
+*:ts=8
+* Copyright (c) 1982,1985 by Manx Software Systems
+*
+	instxt	<zpage.h>
+
+INDEX	EQU	R0
+FLAGS	EQU	R0+1
+DEXP	EQU	R0+2
+TMP0	EQU	R1
+STR	EQU	R1+1
+*
+PREC	EQU	8
+*
+*
+*	atof -	called with addr of string on stack
+*		returns with double value in ACC
+*
+	cseg
+	public	atof_
+atof_	ldy	#0		;initialize variables to zero
+	sty	INDEX
+	sty	FLAGS
+	sty	DEXP
+	sty	DEXP+1
+	sty	TMP0
+	tya
+	ldy	#PREC+1		;initialize acc to zero
+atof1	sta	(ACC),Y
+	dey
+	bpl	atof1
+	ldy	#1
+	lda	#-64
+	sta	(ACC),Y
+	iny
+	lda	(SP),Y		;pointer to string in STR
+	sta	STR
+	iny
+	lda	(SP),Y
+	sta	STR+1
+	ldy	#0
+	lda	(STR),Y		;check sign of number
+	cmp	#'+
+	beq	getnum
+	cmp	#'-
+	bne	getnum1
+	lda	#1		;set minus flag
+	sta	FLAGS
+*
+*	convert the main part of the number
+*
+getnum	inc	INDEX		;bump to next char
+	ldy	INDEX
+	lda	(STR),Y
+getnum1	cmp	#'.		;is it a decimal point
+	bne	getnum3
+	bit	FLAGS		;check the dp flag
+	bvc	getnum2
+	jmp	convert		;already have decimal pt
+getnum2	lda	FLAGS		;set the dp flag
+	ora	#$40
+	sta	FLAGS
+	bne	getnum
+getnum3	cmp	#'0		;is it a number
+	bcc	chkexp		;no, check if exponent
+	cmp	#'9+1
+	bcs	chkexp
+	sec
+	sbc	#'0
+	sta	TMP0		;save for the moment
+	jsr	mul10		;multiply ACC by 10.0
+	ldy	#0
+	tya
+getnum4	sta	(SEC),Y		;clear the SEC
+	iny
+	cpy	#PREC+2
+	bne	getnum4
+	lda	#1
+	tay
+	sta	(SEC),Y
+	iny
+	lda	TMP0
+	beq	getnum5
+	sta	(SEC),Y
+	jsr	.addd#
+getnum5	bit	FLAGS		;are we doing fraction?
+	bvc	getnum6
+	sec
+	lda	DEXP
+	sbc	#1
+	sta	DEXP
+	lda	DEXP+1
+	sbc	#0
+	sta	DEXP+1
+getnum6	jmp	getnum
+*
+*	get the exponent value
+*
+chkexp	cmp	#'e		;is it an exponent
+	beq	doexp
+	cmp	#'E
+	beq	doexp
+	jmp	convert
+doexp	lda	#0
+	sta	TMP0
+	inc	INDEX
+	ldy	INDEX
+	lda	(STR),Y
+	cmp	#'+
+	beq	doexp1
+	cmp	#'-
+	bne	doexp2
+	lda	FLAGS		;set exponent sign flag
+	ora	#$80
+	sta	FLAGS
+doexp1	inc	INDEX
+	ldy	INDEX
+	lda	(STR),Y		;check if still a number
+doexp2	sec
+	sbc	#'0
+	bcc	doexp3
+	cmp	#10
+	bcs	doexp3
+	pha
+	asl	TMP0
+	lda	TMP0
+	asl	A
+	asl	A
+	adc	TMP0
+	sta	TMP0
+	pla
+	adc	TMP0
+	sta	TMP0
+	bcc	doexp1
+doexp3	bit	FLAGS
+	bpl	doexp4
+	sec
+	lda	DEXP
+	sbc	TMP0
+	sta	DEXP
+	bcs	convert
+	dec	DEXP+1
+	jmp	convert
+doexp4	clc
+	lda	DEXP
+	adc	TMP0
+	sta	DEXP
+	bcc	convert
+	inc	DEXP+1
+*
+*	convert the decimal exponent
+*
+convert	lda	DEXP+1
+	bmi	conv2
+	bne	conv1
+	lda	DEXP
+	beq	conv3
+conv1	jsr	mbig
+	jmp	conv3
+conv2	jsr	msmall
+conv3	lda	FLAGS
+	and	#1
+	beq	conv4
+	ldy	#0
+	lda	(ACC),Y
+	eor	#$80
+	sta	(ACC),Y
+conv4	rts
+*
+*	make the acc bigger
+*
+mbig	ldx	#7
+	lda	DEXP+1
+	bne	mbig2
+	lda	DEXP
+	bne	mbig1
+	rts
+mbig1	cmp	tentab,X
+	bcs	mbig2
+	inx
+	bne	mbig1
+mbig2	sec
+	lda	DEXP
+	sbc	tentab,X
+	sta	DEXP
+	lda	DEXP+1
+	sbc	#0
+	sta	DEXP+1
+	jsr	copy
+	jmp	mbig
+*
+*	make the acc smaller
+*
+msmall	ldx	#0
+	lda	DEXP
+	bne	msm1
+	lda	DEXP+1
+	bne	msm2
+	rts
+msm1	cmp	tentab,X
+	bcc	msm2
+	beq	msm2
+	inx
+	bne	msm1
+msm2	sec
+	lda	DEXP
+	sbc	tentab,X
+	sta	DEXP
+	lda	DEXP+1
+	sbc	#-1
+	sta	DEXP+1
+	jsr	copy
+	jmp	msmall
+*
+*
+*
+mul10	ldx	#13
+*
+copy	txa
+	asl	A
+	asl	A
+	asl	A
+	adc	#7
+	tax
+	ldy	#PREC+1
+	lda	#0
+copy1	sta	(SEC),Y
+	dey
+	cpy	#8
+	bne	copy1
+copy2	lda	tens,X
+	sta	(SEC),Y
+	dex
+	dey
+	bne	copy2
+	lda	#0
+	sta	(SEC),Y
+	jmp	.muld#
+*
+*
+	dseg
+*
+tens
+* 1e-64
+	fcb	$E6,$0A,$87,$FE,$A2,$7A,$53,$A9
+* 1e-32
+	fcb	$F3,$33,$EC,$47,$AB,$51,$4E,$7F
+* 1e-16
+	fcb	$FA,$07,$34,$AC,$A5,$F6,$22,$72
+* 1e-8
+	fcb	$FD,$2A,$F3,$1D,$C4,$61,$18,$79
+* 1e-4
+	fcb	$FF,$06,$8D,$B8,$BA,$C7,$10,$CD
+* 1e-2
+	fcb	$00,$02,$8F,$5C,$28,$F5,$C2,$8F
+* 1e-1
+	fcb	$00,$19,$99,$99,$99,$99,$99,$9A
+* 1e64
+	fcb	$1B,$18,$4F,$03,$E9,$3F,$F9,$F5
+* 1e32
+	fcb	$0E,$04,$EE,$2D,$6D,$41,$5B,$87
+* 1e16
+	fcb	$07,$23,$86,$F2,$6F,$C1,$00,$00
+* 1e8
+	fcb	$04,$05,$F5,$E1,$00,$00,$00,$00
+* 1e4
+	fcb	$02,$27,$10,$00,$00,$00,$00,$00
+* 1e2
+	fcb	$01,$64,$00,$00,$00,$00,$00,$00
+* 1e1
+	fcb	$01,$0A,$00,$00,$00,$00,$00,$00
+*
+tentab
+	fcb	-64,-32,-16,-8,-4,-2,-1,64,32,16,8,4,2,1
+	cseg

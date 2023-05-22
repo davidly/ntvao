@@ -1,0 +1,59 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+*	This routine copies args from the machine stack to the
+*	pseudo-stack. It also makes the call to the subroutine.
+*	Upon return, it pops the args back off the stack.
+*
+*
+*	The stack looks as follows:
+*
+*	ARG n
+*	ARG n-1
+*	...
+*	ARG 1
+*	ARG 0
+*	Return address to calling routine
+*
+
+	instxt	<zpage.h>
+*
+	public	.cpystk2
+.cpystk2
+	pla			;get pointer to in-line values
+	sta	VAL
+	pla
+	sta	VAL+1
+	sec			;drop stack pointer by appropriate amount
+	ldy	#1
+	lda	SP
+	sbc	(VAL),Y
+	sta	SP
+	bcs	drop1
+	dec	SP+1
+drop1	lda	(VAL),Y		;save count of items
+	tax
+	ldy	#0		;set up to save return address
+	clc
+	lda	VAL
+	adc	#1		;bump to skip in-line values
+	sta	(SP),Y
+	tya
+	iny
+	dex
+	adc	VAL+1
+	sta	(SP),Y		;save return address on pseudo-stack
+	bne	drop3
+drop2	pla			;get real arguments
+	sta	(SP),Y		;save on pseudo-stack
+drop3	iny
+	dex
+	bne	drop2
+	lda	#>.modstk#-1	;set up to return to modstk routine
+	pha
+	lda	#<.modstk#-1
+	pha
+	lda	#0
+	jmp	(R0)
+

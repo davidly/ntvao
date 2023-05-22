@@ -1,0 +1,60 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+
+	instxt	<zpage.h>
+
+*
+*	char *
+*	strncpy(s1, s2, n)
+*	  char *s1, *s2;
+*	  int n;
+*
+*	copy at most n chars from s2 to s1
+*
+
+S1	equ	R0+2
+S2	equ	R0+4
+N	equ	R0+6
+
+	public	strncpy_
+strncpy_
+	ldy	#7
+load	lda	(SP),Y		;copy args to registers
+	sta	R0,Y
+	dey
+	bne	load
+
+	lda	S1		;copy address of s1 for return
+	sta	R0
+	lda	S1+1
+	sta	R0+1
+
+	ldx	N		;get N in X for count
+	beq	decN		;zero, dec the high part
+loop	lda	(S2),Y		;get byte from s2
+	sta	(S1),Y		;copy to s1
+	beq	done		;if null, end of string
+	iny
+	bne	decX
+	inc	S1+1
+	inc	S2+1
+decX	dex
+	bne	loop
+decN	dec	N+1		;dec high byte
+	bpl	loop		;more to do
+
+done	txa			;check count
+	beq	decN2		;skip to dec
+fill	lda	#0		;get a null byte
+	sta	(S1),Y		;null pad the field
+	iny
+	bne	decX2
+	inc	S1+1
+decX2	dex
+	bne	fill
+decN2	dec	N+1
+	bpl	fill
+	rts
+

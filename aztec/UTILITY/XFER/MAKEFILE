@@ -1,0 +1,37 @@
+.SUFFIXES: .c .a86 .r68 .r86 .r65 
+CFLAGS=
+C68FLAGS=
+C86FLAGS=
+
+.c.r68:
+	c68 $(C68FLAGS) -o $*.r68 $*.c
+
+.c.r65:
+	c65 -DPRODOS -o $*.r65 $*.c
+
+.c.r86:
+	cc86 $(C86FLAGS) -o $*.r86 $*.c
+
+.a86.r86:
+	as86 -o $*.r86 $*.a86
+
+godbout:	xfer.r86 x_godbou.r86
+	ln86 -o godbout.exe xfer.r86 x_godbou.r86 -lc
+
+amiga:	xfer.r68 x_amiga.r68
+	ln68 xfer.r68 x_amiga.r68 -lc
+	ren xfer xfer.amiga
+
+apple:	xfer.r65 x_apple.r65
+	ln65 xfer.r65 x_apple.r65 -lc
+	strip65 <xfer >xfer.apl
+
+apple33: xfer33.r65 x_apple.r65
+	ln65 -o xfer33 xfer33.r65 x_apple.r65 -ld
+	strip65 <xfer33 >xfer33.apl
+
+pc:	xfer.r86 x_ibmpc.r86
+	ln86 xfer.r86 x_ibmpc.r86 -lc
+
+xfer33.r65: xfer.c
+	c65 -DDOS33 -o xfer33.r65 xfer.c

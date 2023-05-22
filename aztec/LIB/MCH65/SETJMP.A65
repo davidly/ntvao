@@ -1,0 +1,77 @@
+; Copyright (C) 1985 by Manx Software Systems, Inc.
+; :ts=8
+;
+	instxt	<zpage.h>
+
+	public setjmp_
+setjmp_
+	clc
+	pla				;save real return address
+	adc	#1
+	sta	R0
+	sta	VAL
+	pla
+	bcc	set0
+	adc	#1
+set0
+	sta	R0+1
+	sta	VAL+1
+	ldy	#3
+set1	lda	(SP),Y			;save fake return and buf ptr
+	sta	R0+2,Y
+	dey
+	bpl	set1
+	ldy	#25			;save frame stuff and returns
+	ldx	#9
+set2	lda	SP,X
+	sta	(R1),Y
+	dey
+	dex
+	bpl	set2
+	ldy	#15
+set3	lda	REGS,Y			;save register variables
+	sta	(R1),Y
+	dey
+	bpl	set3
+	lda	#0
+	sta	R0
+	sta	R0+1
+	jmp	(VAL)			;and return
+
+;
+	public	longjmp_
+longjmp_
+	pla				;discard return address
+	pla
+	ldy	#5
+long1	lda	(SP),Y			;get buf pointer and return value
+	sta	R0+2,Y
+	dey
+	bpl	long1
+	ldy	#25
+	ldx	#9
+long2	lda	(R1),Y			;get frame and returns
+	sta	SP,X
+	dey
+	dex
+	bpl	long2
+long3	lda	(R1),Y			;get registers back
+	sta	REGS,Y
+	dey
+	bpl	long3
+	iny
+	lda	R0+2			;set fake return
+	sta	(SP),Y
+	iny
+	lda	R0+3
+	sta	(SP),Y
+	lda	R0			;swap return address and return value
+	ldy	R1+2
+	sta	R1+2
+	sty	R0
+	lda	R0+1
+	ldy	R1+3
+	sta	R1+3
+	sty	R0+1
+	jmp	(R1+2)			;and return
+;

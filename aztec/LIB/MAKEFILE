@@ -1,0 +1,61 @@
+stdio.mk:
+	cd stdio;make rel
+
+stdio.mki:
+	cd stdio;make int
+
+mch65.mk:
+	cd mch65;make rel
+
+misc.mk:
+	cd misc;make rel
+
+misc.mki:
+	cd misc;make int
+
+dev.mk:
+	cd dev;make rel
+
+dev.mki:
+	cd dev;make int
+
+prodos.mk:
+	cd prodos;make rel
+
+prodos.mki:
+	cd prodos;make int
+
+time.mk:
+	cd time;make rel
+
+time.mki:
+	cd time;make int
+
+flt.mk:
+	cd flt;make rel
+
+flt.mki:
+	cd flt;make int
+
+
+rom.mk:
+	cd rom;make rel
+
+rom.mki:
+	cd rom;make int
+
+c.lib: stdio.mk mch65.mk misc.mk dev.mk prodos.mk time.mk rom.mk c.bld
+	lb65 c.lib -e .r -f c.bld
+
+ci.lib: stdio.mki mch65.mk misc.mki dev.mki prodos.mki time.mki rom.mki ci.bld
+	lb65 ci.lib -e .r -f ci.bld
+
+m.lib: flt.mk m.bld
+	(cd stdio;make printf.r fprintf.r scanf.r fscanf.r)
+	(cd misc;make sprintf.r sscanf.r fformat.r fscan.r)
+	lb65 m.lib -e .r -f m.bld
+
+mi.lib: flt.mki mi.bld
+	(cd stdio;make printf.i fprintf.i scanf.i fscanf.i)
+	(cd misc;make sprintf.i sscanf.i fformat.i fscan.i)
+	lb65 mi.lib -e .r -f mi.bld

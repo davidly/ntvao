@@ -1,0 +1,48 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+REL= atoi.r atol.r calloc.r ctype.r format.r malloc.r\
+	qsort.r scan.r sprintf.r sscanf.r
+
+INT= atoi.i atol.i calloc.i ctype.i format.i malloc.i\
+	qsort.i scan.i sprintf.i sscanf.i
+
+SRC= atoi.c atol.c calloc.c ctype.c format.c malloc.c\
+	qsort.c scan.c sprintf.c sscanf.c 
+
+rel: $(REL)
+	echo done
+
+int: $(INT)
+	echo done
+
+
+fformat.r: format.c
+	cg65 +g0,8,80,10 -DFLOAT -o fformat.r format.c
+	sqz65 fformat.r
+
+fformat.i: format.c
+	cci -ao fformat.asm -DFLOAT format.c
+	optint65 -ZAP fformat.asm
+	sqz65 fformat.i
+
+fscan.r: scan.c
+	cg65 +g0,8,80,10 -DFLOAT -o fscan.r scan.c
+	sqz65 fscan.r
+
+fscan.i: scan.c
+	cci -ao fscan.asm -DFLOAT scan.c
+	optint65 -ZAP fscan.asm
+	sqz65 fscan.i

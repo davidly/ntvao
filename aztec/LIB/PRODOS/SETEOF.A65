@@ -1,0 +1,5 @@
+;:ts=8
+	public	seteof_
+seteof_
+	jmp	_seteof_
+	public	_seteof_

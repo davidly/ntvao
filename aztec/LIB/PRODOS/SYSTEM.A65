@@ -1,0 +1,27 @@
+*:ts=8
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+
+	instxt	<zpage.h>
+
+MLI	equ	$bf00
+
+	global	_sys_parm_,18	;parameter area for ProDOS MLI calls
+
+*
+*	_system(SYSFUNC)
+*
+
+	public	_system_
+_system_
+	ldy	#2
+	lda	(SP),Y
+	sta	SYSFUNC
+	jsr	MLI
+SYSFUNC	fcb	0
+	fdb	_sys_parm_
+	sta	R0
+	lda	#0
+	sta	R0+1
+	rts
+

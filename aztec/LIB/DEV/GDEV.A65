@@ -1,0 +1,362 @@
+;:ts=8
+; Copyright (C) 1985, by Manx Software Systems, Inc.
+
+;	Generic Slot Device Driver
+
+	instxt	<zpage.h>
+
+; offsets into slot_dev structure
+
+OUTVEC	equ	0
+INVEC	equ	2
+INIT	equ	4
+SLOT	equ	6
+HI_SLOT	equ	7
+TYPE	equ	8
+FLAGS	equ	9
+TABP	equ	10
+TABW	equ	11
+IFLAGS	equ	12
+XTRA	equ	13
+
+; flags bit meanings
+
+LFCR	equ	$01
+TABS	equ	$02
+UPPR	equ	$04
+CRLF	equ	$08
+HIGH	equ	$80
+
+; iflags bit meanings
+
+INITALL	equ	$07
+
+INITVEC	equ	$01
+INITCAL	equ	$02
+INITSTR	equ	$04
+REINIT	equ	$08
+BACKVEC	equ	$10
+BACKCAL	equ	$20
+BACKSTR	equ	$40
+
+; other zero page equates
+
+CSWL	equ	$36
+CSWH	equ	$37
+KSWL	equ	$38
+KSWH	equ	$39
+
+; stuff needed for init
+	public _dev_info_
+INIT_BUF equ	154	;offset of initbuf from begin of devinfo structure
+
+	public	_slot_open_
+_slot_open_
+	ldx	$cfff		;turn off all $C8 ROMs
+	ldx	#SLOT-1
+	jsr	set_slot	;copy arg from stack
+	lda	#0		;set R0 to point to slot's firmware
+	sta	R0
+	ldy	#IFLAGS		;check out initialization flags
+	lda	(VAL),Y
+	sta	R0+2		;save for later use
+	and	#REINIT		;check for re-open stuff
+	beq	open1
+	lda	(VAL),Y		;clear all the flags so only done once
+	and	#$ff-INITALL
+	sta	(VAL),Y
+open1
+	lda	R0+2
+	and	#INITVEC	;check to see if we need to init the vectors
+	beq	open3
+	lda	R0+1
+	and	#$f
+	bne	open2		;if slot 0, do special
+	jmp	copy_vec
+open2
+	ldy	#$05		;check for Pascal signature bytes
+	lda	(R0),Y
+	cmp	#$38
+	jne	do_basic
+	ldy	#$07
+	lda	(R0),Y
+	cmp	#$18
+	jne	do_basic
+	ldy	#$0b		;check for Pascal 1.1 signature
+	lda	(R0),Y
+	cmp	#$01
+	bne	do_1.0
+	ldy	#$0e		;get read entry point
+	lda	(R0),Y
+	ldy	#INVEC
+	sta	(VAL),Y
+	iny
+	lda	R0+1
+	sta	(VAL),Y
+	ldy	#$0f		;get write entry point
+	lda	(R0),Y
+	ldy	#OUTVEC
+	sta	(VAL),Y
+	iny
+	lda	R0+1
+	sta	(VAL),Y
+	ldy	#$0d		;get init entry point
+	lda	(R0),Y
+	sta	R0		;set up for call
+	lda	#1
+	bne	open3
+;
+do_1.0
+	ldy	#INVEC
+	lda	#$4d		;1.0 read entry point
+	sta	(VAL),Y
+	iny
+	lda	#$c8
+	sta	R0+1
+	sta	(VAL),Y
+	ldy	#OUTVEC+1
+	sta	(VAL),Y
+	dey
+	lda	#$aa		;1.0 write entry point
+	sta	(VAL),Y
+	lda	#0
+;
+open3
+	ldy	#TYPE		;set the entry type
+	sta	(VAL),Y
+open4
+	lda	R0+2
+	and	#INITCAL	;check to see if we should call the entry
+	beq	open5
+	ldy	#SLOT		;set up registers for call
+	lda	(VAL),Y		;$Cs
+	tax
+	iny
+	lda	(VAL),Y		;$s0
+	tay
+	jsr	call_R0
+open5
+	lda	R0+2
+	and	#INITSTR	;check to see if anything gets sent to start
+	bne	init0
+	jmp	open6
+init0
+	clc	
+	lda	_dev_info_	;set addr of init str in R0
+	adc	#INIT_BUF
+	sta	R1
+	lda	_dev_info_+1
+	bcc	init1
+	adc	#0
+init1	sta	R1+1
+	clc
+	ldy	#INIT
+	lda	(VAL),Y
+	adc	R1
+	sta	R1
+	bcc	init2
+	inc	R1+1
+init2					;go into loop, calling _slot_write
+	ldx	#OUTVEC
+	jsr	set_slot
+	lda	#0
+	sta	R1+2
+init3	ldy	R1+2
+	lda	(R1),Y
+	tax	
+	beq	open6
+	jsr	put
+	inc	R1+2
+	jmp	init3
+open6
+	rts
+
+;
+call_R0
+	jmp	(R0)		;call the init routine
+;
+do_basic
+	jsr	copy_vec
+	lda	R0+1
+	sta	KSWH
+	sta	CSWH
+	lda	#0
+	sta	KSWL
+	sta	CSWL
+	jsr	x1
+	ldy	#OUTVEC
+loop2
+	lda	CSWL-OUTVEC,Y
+	tax
+	lda	(VAL),Y
+	sta	CSWL-OUTVEC,Y
+	txa
+	sta	(VAL),Y
+	iny
+	cpy	#OUTVEC+4
+	bne	loop2
+	ldy	#TYPE
+	lda	#-1
+	sta	(VAL),Y
+	bne	open5
+;
+x1	jmp	(KSWL)
+;
+copy_vec
+	ldy	#OUTVEC
+loop
+	lda	CSWL-OUTVEC,Y
+	sta	(VAL),Y
+	iny
+	cpy	#OUTVEC+4
+	bne	loop
+	rts
+;
+
+	public	_slot_read_
+_slot_read_
+	ldx	$CFFF		turn off all $C8 ROMs
+	ldx	#INVEC
+	jsr	set_slot
+	jsr	do_call
+	tax
+	ldy	#FLAGS
+	lda	(VAL),Y
+	and	#LFCR
+	beq	read1
+	cpx	#$0d
+	bne	read1
+	ldx	#$0a
+read1
+	stx	R0
+	lda	#0
+	sta	R0+1
+	rts
+;
+	public	_slot_write_
+_slot_write_
+	ldx	$CFFF		turn off all $C8 ROMs
+	ldx	#OUTVEC
+	jsr	set_slot
+wr0
+	tax
+	ldy	#FLAGS
+	lda	(VAL),Y
+	tay
+	and	#LFCR
+	beq	wr1
+	cpx	#$0a
+	bne	wr1
+	ldx	#$0d
+wr1
+	tya
+	and	#UPPR
+	beq	wr2
+	cpx	#'a
+	bcc	wr2
+	cpx	#'z+1
+	bcs	wr2
+	txa
+	adc	#'A-'a
+	tax
+wr2
+	tya
+	and	#TABS
+	beq	wr3
+	cpx	#$09
+	bne	wr3
+	ldy	#TABW
+	lda	(VAL),Y
+	bne	tab0
+	lda	#$8
+tab0
+	sta	R0+2
+	ldy	#TABP
+tab1
+	cmp	(VAL),Y
+	bcc	tab2
+	bne	tab3
+tab2
+	clc
+	adc	R0+2
+	bne	tab1
+tab3
+	sec
+	sbc	(VAL),Y
+	sta	R0+2
+tab4
+	ldx	#$20
+	jsr	put
+	dec	R0+2
+	bne	tab4
+	rts
+
+wr3
+	tya
+	and	#CRLF
+	beq	put
+	cpx	#$0d
+	bne	put
+	jsr	put
+	ldx	#$0a
+
+
+put
+	clc
+	ldy	#TABP
+	lda	(VAL),Y
+	adc	#1
+	sta	(VAL),Y
+	cpx	#$0d		;is it return?
+	beq	put1
+	cpx	#$0c		;is it form feed
+	bne	put2
+put1
+	lda	#0
+	sta	(VAL),Y
+put2
+	ldy	#FLAGS
+	lda	(VAL),Y
+	and	#HIGH
+	beq	put3
+	txa
+	ora	#$80
+	tax
+put3
+	txa
+
+do_call
+	pha
+	ldy	#SLOT
+	lda	(VAL),Y
+	tax
+	iny
+	lda	(VAL),Y
+	tay
+	pla
+	jmp	(R0)
+;
+
+; set VAL to point to slot structure, and R0 to point to entry point
+; optional second argument is returned in ACC
+
+set_slot
+	ldy	#2
+	lda	(SP),Y
+	sta	VAL
+	iny
+	lda	(SP),Y
+	sta	VAL+1
+	iny
+	lda	(SP),Y
+	pha
+	txa
+	tay
+	lda	(VAL),Y
+	sta	R0
+	iny
+	lda	(VAL),Y
+	sta	R0+1
+	pla
+	rts
+;

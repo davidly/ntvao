@@ -1,0 +1,87 @@
+;:ts=8
+;int main( argc, argv ) int argc; char * argv[];
+	public	main_
+main_
+	jsr	.csav#
+	fcb	.3
+	fdb	.2
+;{
+;argc = 11
+;argv = 13
+;#if 1
+;    int i, c;
+;#endif
+;
+;#if 0
+;
+;#if 1
+;    #asm
+        lda     #$25      ; '%'
+        jsr     $ffef
+;    c = 1;
+	tya
+	ldy	#252
+	sta	(6),Y
+	txa
+	iny
+	sta	(6),Y
+;
+;    for ( i = 0; i < 5; i++ )
+	iny
+	sta	(6),Y
+	iny
+	sta	(6),Y
+	jmp	.5
+.4
+	clc
+	lda	#1
+	ldy	#254
+	adc	(6),Y
+	sta	(6),Y
+	txa
+	iny
+	adc	(6),Y
+	sta	(6),Y
+.5
+	ldy	#254
+	lda	(6),Y
+	cmp	#5
+	iny
+	lda	(6),Y
+	sbc	#0
+	jge	.6
+;    {
+;        #asm
+           lda   #$2a
+           jsr   $ffef
+;        c += 1;
+	clc
+	lda	#1
+	ldy	#252
+	adc	(6),Y
+	sta	(6),Y
+	txa
+	iny
+	adc	(6),Y
+	sta	(6),Y
+;    }
+	jmp	.4
+.6
+;#endif
+;
+;    #asm
+        lda     #$24      ; '$'
+        jsr     $ffef
+;
+;    #asm
+        jsr     $ff1f
+;
+;/* no sense in generating this code:   return 0; */
+;} /*main*/
+	rts
+.2	equ	-4
+.3	equ	0
+;
+	dseg
+	cseg
+	end

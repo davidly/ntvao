@@ -1,0 +1,263 @@
+*:ts=8
+* Copyright (c) 1982,1983,1985 by Manx Software Systems
+*
+*
+	instxt	<zpage.h>
+
+PREC	EQU	8
+
+	public	.fltused
+.fltused
+	public	.flt2
+.flt2
+*
+	public	.fltjmp
+.fltjmp	lda	(PC),Y
+	inc	PC
+	bne	fltjmp1
+	inc	PC+1
+fltjmp1	asl	A
+	tax
+	lda	FTAB-2,X
+	sta	VAL
+	lda	FTAB-1,X
+	sta	VAL+1
+	jmp	(VAL)
+*
+FTAB	fdb	.muld#
+	fdb	.divd#
+	fdb	.addd#
+	fdb	.subd#
+	fdb	.negd
+	fdb	.eqd#
+	fdb	.ned#
+	fdb	.ltd#
+	fdb	.led#
+	fdb	.gtd#
+	fdb	.ged#
+	fdb	.ldlpd
+	fdb	.ldlsd
+	fdb	.stld
+	fdb	.pshld
+	fdb	.ldgpd
+	fdb	.ldgsd
+	fdb	.stgd
+	fdb	.pshgd
+	fdb	.pshd
+	fdb	.puld
+	fdb	.ldsd
+	fdb	.stsd
+	fdb	.ldipd
+	fdb	.ldisd
+	fdb	.swapd#
+	fdb	.inrd
+	fdb	.dcrd
+	fdb	.tstd#
+	fdb	.ldlpf
+	fdb	.ldlsf
+	fdb	.stlf
+	fdb	.pshlf
+	fdb	.ldgpf
+	fdb	.ldgsf
+	fdb	.stgf
+	fdb	.pshgf
+	fdb	.ldsf
+	fdb	.stsf
+	fdb	.itod#
+	fdb	.utod#
+	fdb	.dtoi#
+	fdb	.dtou#
+	fdb	.xtod#
+	fdb	.dtox#
+*
+*	store sec into location in VAL
+*
+.sssec	ldy	#5
+	bne	sdsec1
+.sdsec	ldy	#9
+sdsec1	jsr	.swapd#
+	jsr	.stflt#
+	jmp	.swapd#
+*
+*	negate the accumulator
+*
+.negd	lda	(ACC),Y
+	eor	#$80
+	sta	(ACC),Y
+	rts
+*
+*	push acc onto the stack
+*
+.pshd	sec
+	lda	SP
+	sbc	#8
+	sta	SP
+	sta	VAL
+	bcs	pshd1
+	dec	SP+1
+pshd1	lda	SP+1
+	sta	VAL+1
+	jmp	.sdacc#
+*
+*	pop the stack into sec
+*
+.puld	lda	SP
+	sta	VAL
+	lda	SP+1
+	sta	VAL+1
+	jsr	.ldsec#
+	clc
+	lda	SP
+	adc	#8
+	sta	SP
+	bcc	puld1
+	inc	SP+1
+puld1	rts
+*
+*
+*
+.ldlpf	jsr	twolcl
+	jmp	.lsacc#
+*
+.ldlsf	jsr	twolcl
+	jmp	.lssec#
+*
+.stlf	jsr	twolcl
+	jmp	.ssacc#
+*
+.pshlf	jsr	twolcl
+	jsr	.lsacc#
+	jmp	.pshd#
+*
+.ldgpf	jsr	twoval
+	jmp	.lsacc#
+*
+.ldgsf	jsr	twoval
+	jmp	.lssec#
+*
+.stgf	jsr	twoval
+	jmp	.ssacc#
+*
+.pshgf	jsr	twoval
+	jsr	.lsacc#
+	jmp	.pshd#
+*
+.ldsf	lda	R0
+	sta	VAL
+	lda	R0+1
+	sta	VAL+1
+	jmp	.lsacc#
+*
+.stsf	jsr	pul0#
+	lda	R1
+	sta	VAL
+	lda	R1+1
+	sta	VAL+1
+	jmp	.ssacc#
+*
+.ldipd	lda	PC
+	sta	VAL
+	lda	PC+1
+	sta	VAL+1
+	jsr	.ldacc#
+ldipd1	clc
+	lda	PC
+	adc	#8
+	sta	PC
+	bcc	ldipd2
+	inc	PC+1
+ldipd2	rts
+*
+.ldisd	lda	PC
+	sta	VAL
+	lda	PC+1
+	sta	VAL+1
+	jsr	.ldsec#
+	jmp	ldipd1
+*
+.ldlpd	jsr	twolcl
+	jmp	.ldacc#
+*
+.ldlsd	jsr	twolcl
+	jmp	.ldsec#
+*
+.stld	jsr	twolcl
+	jmp	.sdacc#
+*
+.pshld	jsr	twolcl
+	jsr	.ldacc#
+	jmp	.pshd#
+*
+.ldgpd	jsr	twoval
+	jmp	.ldacc#
+*
+.ldgsd	jsr	twoval
+	jmp	.ldsec#
+*
+.stgd	jsr	twoval
+	jmp	.sdacc#
+*
+.pshgd	jsr	twoval
+	jsr	.ldacc#
+	jmp	.pshd#
+*
+.ldsd	lda	R0
+	sta	VAL
+	lda	R0+1
+	sta	VAL+1
+	jmp	.ldacc#
+*
+.stsd	jsr	pul0#
+	lda	R1
+	sta	VAL
+	lda	R1+1
+	sta	VAL+1
+	jmp	.sdacc#
+*
+.inrd	jsr	.swapd#
+	lda	#1
+	sta	R0
+	sty	R0+1
+	jsr	.itod#
+	jmp	.addd#
+*
+.dcrd	jsr	.swapd#
+	lda	#-1
+	sta	R0
+	sta	R0+1	;changed from "ldy R0+1" *jd 4 Sept 86
+	jsr	.itod#
+	jmp	.addd#
+*
+twoval	lda	(PC),Y		;fetch two byte operand into VAL
+	sta	VAL
+	iny
+	lda	(PC),Y
+	sta	VAL+1
+	dey
+	clc
+	lda	PC
+	adc	#2
+	sta	PC
+	bcc	twoval1
+	inc	PC+1
+	clc
+twoval1	rts
+*
+twolcl	clc			;fetch two byte local address into VAL
+	lda	(PC),Y
+	adc	FRAME
+	sta	VAL
+	iny
+	lda	(PC),Y
+	adc	FRAME+1
+	sta	VAL+1
+	dey
+	clc
+	lda	PC
+	adc	#2
+	sta	PC
+	bcc	twolcl1
+	inc	PC+1
+	clc
+twolcl1	rts
+*

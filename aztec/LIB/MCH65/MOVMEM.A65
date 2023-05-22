@@ -1,0 +1,75 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	void
+*	movmem(src, dst, n)
+*	  char *src, *dst;
+*	  int n;
+*
+*	move n chars from src to dst
+*
+
+SRC	equ	R0+2
+DST	equ	R0+4
+N	equ	R0+6
+
+	public	movmem_
+movmem_
+	ldy	#7		;copy the params to zero page
+block1	lda	(SP),Y
+	sta	R0,Y
+	dey
+	bpl	block1
+	iny
+	lda	SRC
+	cmp	DST
+	lda	SRC+1
+	sbc	DST+1
+	bcs	forw		;if src >= dst copy from beginning
+
+	clc
+	lda	SRC
+	adc	N
+	sta	SRC
+	lda	SRC+1
+	adc	N+1
+	sta	SRC+1
+	clc
+	lda	DST
+	adc	N
+	sta	DST
+	lda	DST+1
+	adc	N+1
+	sta	DST+1
+	ldx	N
+	beq	rvrs3
+rvrs1	tya
+	bne	rvrs2
+	dec	SRC+1
+	dec	DST+1
+rvrs2	dey
+	lda	(SRC),Y
+	sta	(DST),Y
+	dex
+	bne	rvrs1
+rvrs3	dec	N+1
+	bpl	rvrs1
+	rts
+
+forw	ldx	N
+	beq	forw3
+forw1	lda	(SRC),Y
+	sta	(DST),Y
+	iny
+	bne	forw2
+	inc	SRC+1
+	inc	DST+1
+forw2	dex
+	bne	forw1
+forw3	dec	N+1
+	bpl	forw1
+	rts
+*

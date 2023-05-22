@@ -1,0 +1,1752 @@
+*:ts=8
+*
+* Copyright (c) 1983,1985 by Manx Software Systems, Inc.
+*
+	instxt	"zpage.h"
+*
+	cseg
+	public	.interp
+.interp	pla			;put return addr in R0
+	sta	R0
+	pla
+	sta	R0+1
+	pla
+	sta	VAL
+	pla
+	sta	VAL+1
+	ldy	#7		;save old SP and old FRAME
+	sec
+	lda	SP		;drop SP by frame size
+	sbc	#9
+	sta	R1		;and save temporarily in R1
+	lda	SP+1
+	sbc	#0
+	sta	R1+1
+inter1	lda	VAL,Y
+	sta	(R1),Y
+	dey
+	bpl	inter1
+	ldy	#1
+	clc
+	lda	R1		;drop SP by locals size
+	sta	FRAME		;move to FRAME first
+	adc	(R0),Y
+	sta	SP
+	iny
+	lda	R1+1
+	sta	FRAME+1
+	adc	(R0),Y
+	sta	SP+1
+	clc			;bump return address by 3 and use as PC
+	lda	R0
+	adc	#3
+	sta	PC
+	lda	R0+1
+	adc	#0
+	sta	PC+1
+	public	mloop
+mloop	ldy	#0		;main interpreter loop
+	lda	(PC),Y		;get opcode
+	inc	PC		;bump program counter
+	bne	mloop1
+	inc	PC+1
+mloop1	tax
+	lda	LTAB,X		;get address
+	sta	VAL
+	lda	HTAB,X
+	sta	VAL+1
+	jmp	(VAL)
+*
+*	short instructions
+*
+*					load local into primary
+*
+shldlp0	lda	#-24
+	bne	shldlpv
+shldlp1	lda	#-22
+	bne	shldlpv
+shldlp2	lda	#-20
+	bne	shldlpv
+shldlp3	lda	#-18
+	bne	shldlpv
+shldlp4	lda	#-16
+	bne	shldlpv
+shldlp5	lda	#-14
+	bne	shldlpv
+shldlp6	lda	#-12
+	bne	shldlpv
+shldlp7	lda	#-10
+	bne	shldlpv
+shldlp8	lda	#-8
+	bne	shldlpv
+shldlp9	lda	#-6
+	bne	shldlpv
+shldlpA	lda	#-4
+	bne	shldlpv
+shldlpB	lda	#-2
+shldlpv	clc
+	adc	FRAME
+	sta	VAL
+	lda	#-1
+	adc	FRAME+1
+	sta	VAL+1
+	lda	(VAL),Y
+	sta	R0
+	iny
+	lda	(VAL),Y
+	sta	R0+1
+	jmp	mloop
+shldlpF	ldy	#$11
+	bne	shldlpf
+shldlpE	ldy	#$0F
+	bne	shldlpf
+shldlpD	ldy	#$0D
+	bne	shldlpf
+shldlpC	ldy	#$0B
+shldlpf	lda	(FRAME),Y
+	sta	R0
+	iny
+	lda	(FRAME),Y
+	sta	R0+1
+	jmp	mloop
+*
+*					load local into secondary
+*
+shldls0	lda	#-24
+	bne	shldlsv
+shldls1	lda	#-22
+	bne	shldlsv
+shldls2	lda	#-20
+	bne	shldlsv
+shldls3	lda	#-18
+	bne	shldlsv
+shldls4	lda	#-16
+	bne	shldlsv
+shldls5	lda	#-14
+	bne	shldlsv
+shldls6	lda	#-12
+	bne	shldlsv
+shldls7	lda	#-10
+	bne	shldlsv
+shldls8	lda	#-8
+	bne	shldlsv
+shldls9	lda	#-6
+	bne	shldlsv
+shldlsA	lda	#-4
+	bne	shldlsv
+shldlsB	lda	#-2
+shldlsv	clc
+	adc	FRAME
+	sta	VAL
+	lda	#-1
+	adc	FRAME+1
+	sta	VAL+1
+	lda	(VAL),Y
+	sta	R1
+	iny
+	lda	(VAL),Y
+	sta	R1+1
+	jmp	mloop
+shldlsF	ldy	#$11
+	bne	shldlsf
+shldlsE	ldy	#$0F
+	bne	shldlsf
+shldlsD	ldy	#$0D
+	bne	shldlsf
+shldlsC	ldy	#$0B
+shldlsf	lda	(FRAME),Y
+	sta	R1
+	iny
+	lda	(FRAME),Y
+	sta	R1+1
+	jmp	mloop
+*
+*					store primary into local
+*
+shstl0	lda	#-24
+	bne	shstlv
+shstl1	lda	#-22
+	bne	shstlv
+shstl2	lda	#-20
+	bne	shstlv
+shstl3	lda	#-18
+	bne	shstlv
+shstl4	lda	#-16
+	bne	shstlv
+shstl5	lda	#-14
+	bne	shstlv
+shstl6	lda	#-12
+	bne	shstlv
+shstl7	lda	#-10
+	bne	shstlv
+shstl8	lda	#-8
+	bne	shstlv
+shstl9	lda	#-6
+	bne	shstlv
+shstlA	lda	#-4
+	bne	shstlv
+shstlB	lda	#-2
+shstlv	clc
+	adc	FRAME
+	sta	VAL
+	lda	#-1
+	adc	FRAME+1
+	sta	VAL+1
+	lda	R0
+	sta	(VAL),Y
+	iny
+	lda	R0+1
+	sta	(VAL),Y
+	jmp	mloop
+shstlF	ldy	#$11
+	bne	shstlf
+shstlE	ldy	#$0F
+	bne	shstlf
+shstlD	ldy	#$0D
+	bne	shstlf
+shstlC	ldy	#$0B
+shstlf	lda	R0
+	sta	(FRAME),Y
+	iny
+	lda	R0+1
+	sta	(FRAME),Y
+	jmp	mloop
+*
+*					push local onto stack
+*
+shpshl0	lda	#-24
+	bne	shpshlv
+shpshl1	lda	#-22
+	bne	shpshlv
+shpshl2	lda	#-20
+	bne	shpshlv
+shpshl3	lda	#-18
+	bne	shpshlv
+shpshl4	lda	#-16
+	bne	shpshlv
+shpshl5	lda	#-14
+	bne	shpshlv
+shpshl6	lda	#-12
+	bne	shpshlv
+shpshl7	lda	#-10
+	bne	shpshlv
+shpshl8	lda	#-8
+	bne	shpshlv
+shpshl9	lda	#-6
+	bne	shpshlv
+shpshlA	lda	#-4
+	bne	shpshlv
+shpshlB	lda	#-2
+shpshlv	clc
+	adc	FRAME
+	sta	VAL
+	lda	#-1
+	adc	FRAME+1
+	sta	VAL+1
+	iny
+	lda	(VAL),Y
+	tax
+	dey
+	lda	(VAL),Y
+	jmp	pshwrd
+shpshlF	ldy	#$12
+	bne	shpshlf
+shpshlE	ldy	#$10
+	bne	shpshlf
+shpshlD	ldy	#$0E
+	bne	shpshlf
+shpshlC	ldy	#$0C
+shpshlf	lda	(FRAME),Y
+	tax
+	dey
+	lda	(FRAME),Y
+	jmp	pshwrd
+*
+*					load primary immediate (0-15)
+*
+shldipF
+shldipE
+shldipD
+shldipC
+shldipB
+shldipA
+shldip9
+shldip8
+shldip7
+shldip6
+shldip5
+shldip4
+shldip3
+shldip2
+shldip1
+	txa
+	and	#$0f
+	sta	R0
+	sty	R0+1
+	jmp	mloop
+shldip0	sty	R0
+	sty	R0+1
+	jmp	mloop
+*
+*					load secondary immediate (0-15)
+*
+shldisF
+shldisE
+shldisD
+shldisC
+shldisB
+shldisA
+shldis9
+shldis8
+shldis7
+shldis6
+shldis5
+shldis4
+shldis3
+shldis2
+shldis1
+	txa
+	and	#$0f
+	sta	R1
+	sty	R1+1
+	jmp	mloop
+shldis0	sty	R1
+	sty	R1+1
+	jmp	mloop
+*
+*					push immediate (0-15)
+*
+shpshiF
+shpshiE
+shpshiD
+shpshiC
+shpshiB
+shpshiA
+shpshi9
+shpshi8
+shpshi7
+shpshi6
+shpshi5
+shpshi4
+shpshi3
+shpshi2
+shpshi1
+shpshi0	txa
+	and	#$0f
+	ldx	#0
+	jmp	pshwrd
+*
+*					add immediate to primary (0-15)
+*
+shaddiF
+shaddiE
+shaddiD
+shaddiC
+shaddiB
+shaddiA
+shaddi9
+shaddi8
+shaddi7
+shaddi6
+shaddi5
+shaddi4
+shaddi3
+shaddi2
+shaddi1	txa
+	and	#$0f
+	clc
+	adc	R0
+	sta	R0
+	bcc	shaddi0
+	inc	R0+1
+shaddi0	jmp	mloop
+*
+*	regular instructions
+*
+ldlpl	jsr	twolcl
+	bcc	ldprm
+*
+ldlps	jsr	onelcl
+ldprm	lda	(VAL),Y
+	sta	R0
+	iny
+	lda	(VAL),Y
+	sta	R0+1
+	jmp	mloop
+*
+ldgp	jsr	twoval		;load global into primary
+	bcc	ldprm
+*
+ldlss	jsr	onelcl
+ldsec	lda	(VAL),Y
+	sta	R1
+	iny
+	lda	(VAL),Y
+	sta	R1+1
+	jmp	mloop
+*
+ldlsl	jsr	twolcl
+	bcc	ldsec
+*
+ldgs	jsr	twoval		;load global into secondary
+	bcc	ldsec
+*
+stls	jsr	onelcl
+store	lda	R0
+	sta	(VAL),Y
+	iny
+	lda	R0+1
+	sta	(VAL),Y
+	jmp	mloop
+*
+stll	jsr	twolcl
+	bcc	store
+*
+stg	jsr	twoval		;store primary into global
+	bcc	store
+*
+pshls	jsr	onelcl
+pshval	iny
+	lda	(VAL),Y
+	tax
+	dey
+	lda	(VAL),Y
+	jmp	pshwrd
+*
+pshll	jsr	twolcl
+	bcc	pshval
+*
+pshg	jsr	twoval		;push global onto stack
+	bcc	pshval
+*
+leap	jsr	twobyte		;load effective address into primary
+	adc	FRAME
+	sta	R0
+	txa
+	adc	FRAME+1
+	sta	R0+1
+	jmp	mloop
+*
+leas	jsr	twobyte		;load effective address into secondary
+	adc	FRAME
+	sta	R1
+	txa
+	adc	FRAME+1
+	sta	R1+1
+	jmp	mloop
+*
+ldips	jsr	onebyte
+ldip	sta	R0		;load immediate value into primary
+	stx	R0+1
+	jmp	mloop
+*
+ldipl	jsr	twobyte
+	bcc	ldip
+*
+ldiss	jsr	onebyte
+ldis	sta	R1		;load immediate value into secondary
+	stx	R1+1
+	jmp	mloop
+*
+ldisl	jsr	twobyte
+	bcc	ldis
+*
+pshis	jsr	onebyte		;push immediate value onto the stack
+	jmp	pshwrd
+*
+pshil	jsr	twobyte
+	jmp	pshwrd
+*
+addis	jsr	onebyte
+addi	adc	R0		;add immediate value to primary
+	sta	R0
+	txa
+	adc	R0+1
+	sta	R0+1
+	jmp	mloop
+*
+addil	jsr	twobyte
+	bcc	addi
+*
+ldlpb	jsr	twolcl
+ldpb	lda	(VAL),Y		;load local byte into primary
+	sta	R0
+	sty	R0+1
+	jmp	mloop
+*
+ldgpb	jsr	twoval		;load primary with global byte
+	bcc	ldpb
+*
+ldlsb	jsr	twolcl
+ldsbb	lda	(VAL),Y		;load local byte into secondary
+	sta	R1
+	sty	R1+1
+	jmp	mloop
+*
+ldgsb	jsr	twoval		;load secondary with global byte
+	bcc	ldsbb
+*
+stlb	jsr	twolcl
+stb	lda	R0		;store primary as local byte
+	sta	(VAL),Y
+	jmp	mloop
+*
+stgb	jsr	twoval		;store the primary into a global byte
+	bcc	stb
+*
+pshlb	jsr	twolcl
+pshb	lda	(VAL),Y		;push a local byte onto the stack
+	ldx	#0
+	jmp	pshwrd
+*
+pshgb	jsr	twoval		;push a global byte onto the stack
+	bcc	pshb
+*
+calli	lda	R0		;call through primary and pop args
+	sta	VAL
+	lda	R0+1
+	sta	VAL+1
+	jmp	calls1
+*
+calls	jsr	twoval		;call a subroutine and pop args
+calls1	jsr	callit1
+	ldy	#0
+	jmp	ssps
+*
+callind	lda	R0		;call through primary
+	sta	VAL
+	lda	R0+1
+	sta	VAL+1
+	jmp	callsu1
+*
+callsub	jsr	twoval		;call a subroutine
+callsu1	jsr	callit1
+	jmp	mloop
+*
+callit1	sec
+	lda	SP
+	sbc	#2
+	sta	SP
+	bcs	callit2
+	dec	SP+1
+callit2	lda	PC
+	sta	(SP),Y
+	iny
+	lda	PC+1
+	sta	(SP),Y
+	jsr	callit4
+	clc
+	lda	SP
+	adc	#2
+	sta	SP
+	bcc	callit3
+	inc	SP+1
+callit3
+	rts
+callit4	jmp	(VAL)
+*
+move	jsr	twobyte		;move size bytes from R0 to R1
+	ldy	#0
+	stx	VAL
+	tax
+	bne	move1
+move0	dec	VAL
+	bpl	move1
+	jmp	mloop
+move1	lda	(R0),Y
+	sta	(R1),Y
+	iny
+	bne	move2
+	inc	R0+1
+	inc	R1+1
+move2	dex
+	beq	move0
+	bne	move1
+*
+ssps	jsr	onebyte
+	adc	SP
+	sta	SP
+	bcc	ssps1
+	inc	SP+1
+ssps1	jmp mloop
+*
+sspl	jsr	twobyte		;modify stack pointer
+	adc	SP
+	sta	SP
+	txa
+	adc	SP+1
+	sta	SP+1
+	jmp	mloop
+*
+brn	jsr	twobyte		;branch always
+	sta	PC
+	stx	PC+1
+	jmp	mloop
+*
+btrue	lda	R0		;branch if true
+	ora	R0+1
+	bne	brn
+brn1	jsr	twobyte
+	jmp	mloop
+*
+bfalse	lda	R0		;branch if false
+	ora	R0+1
+	beq	brn
+	bne	brn1
+*
+brnb	jsr	onebyte		;branch always back
+	adc	PC
+	sta	PC
+	bcs	brnb1
+	dec	PC+1
+brnb1	jmp	mloop
+*
+btb	lda	R0		;branch back if true
+	ora	R0+1
+	bne	brnb
+btb1	jsr	onebyte
+	jmp	mloop
+*
+bfb	lda	R0		;branch back if false
+	ora	R0+1
+	beq	brnb
+	bne	btb1
+*
+brnf	jsr	onebyte		;branch always forward
+	adc	PC
+	sta	PC
+	bcc	brnf1
+	inc	PC+1
+brnf1	jmp	mloop
+*
+btf	lda	R0		;branch forward if true
+	ora	R0+1
+	bne	brnf
+btf1	jsr	onebyte
+	jmp	mloop
+*
+bff	lda	R0		;branch forward if false
+	ora	R0+1
+	beq	brnf
+	bne	btf1
+*
+switch	lda	(PC),Y
+	tax
+	iny
+	lda	(PC),Y
+	sta	R1
+	clc
+	lda	PC
+	adc	#2
+	sta	PC
+	bcc	switch1
+	inc	PC+1
+switch1	ldy	#0
+	txa
+	bne	switch2
+	dec	R1
+	bpl	switch2
+	dey
+	bne	switch4
+switch2	dex
+	lda	(PC),Y
+	cmp	R0
+	bne	switch3
+	iny
+	lda	(PC),Y
+	cmp	R0+1
+	beq	switch4
+switch3	clc
+	lda	PC
+	adc	#4
+	sta	PC
+	bcc	switch1
+	inc	PC+1
+	bcs	switch1
+switch4	iny
+	lda	(PC),Y
+	tax
+	iny
+	lda	(PC),Y
+	sta	PC+1
+	stx	PC
+	jmp	mloop
+*
+fstswt	clc			;fast switch code
+	lda	(PC),Y
+	adc	R0
+	sta	R0
+	iny
+	lda	(PC),Y
+	adc	R0+1
+	sta	R0+1
+	iny
+	lda	R0
+	cmp	(PC),Y
+	iny
+	lda	R0+1
+	sbc	(PC),Y
+	iny
+	bcs	fstswt1
+	lda	R0
+	asl	A
+	rol	R0+1
+	adc	PC
+	sta	PC
+	lda	R0+1
+	adc	PC+1
+	sta	PC+1
+	ldy	#6
+fstswt1	lda	(PC),Y
+	tax
+	iny
+	lda	(PC),Y
+	sta	PC+1
+	stx	PC
+	jmp	mloop
+*
+lds	lda	(R0),Y		;load the primary through the primary
+	tax
+	iny
+	lda	(R0),Y
+	stx	R0
+	sta	R0+1
+	jmp mloop
+*
+ldsb	lda	(R0),Y		;load a byte value through the primary
+	sta	R0
+	sty	R0+1
+	jmp	mloop
+*
+sts	jsr	pul0		;store the primary through the stack
+	lda	R0+1
+	sta	(R1),Y
+	dey
+	lda	R0
+	sta	(R1),Y
+	jmp	mloop
+*
+stsb	jsr	pul0		;store a byte primary through the stack
+	dey
+	lda	R0
+	sta	(R1),Y
+	jmp	mloop
+*
+psh	lda	R0		;push the primary on the stack
+	ldx	R0+1
+	jmp	pshwrd
+*
+pul	jsr	pul0		;pull the secondary from the stack
+	jmp	mloop
+*
+	public	pul0
+pul0	lda	(SP),Y
+	sta	R1
+	iny
+	lda	(SP),Y
+	sta	R1+1
+	clc
+	lda	SP
+	adc	#2
+	sta	SP
+	bcc	pul1
+	inc	SP+1
+pul1	rts
+*
+mult	ldy	#0		;multiply the primary by the secondary
+	sty	VAL
+	sty	VAL+1
+	ldy	#$10
+.ml1	lda	R0
+	lsr	A
+	bcc	.ml2
+	clc
+	lda	VAL
+	adc	R1
+	sta	VAL
+	lda	VAL+1
+	adc	R1+1
+	sta	VAL+1
+.ml2	ror	VAL+1
+	ror	VAL
+	ror	R0+1
+	ror	R0
+	dey
+	bne	.ml1
+	jmp	mloop
+*
+udiv	jsr	.dv		;divide the primary by the secondary
+	jmp	mloop
+*
+div	jsr	.sign		;divide the primary by the secondary
+	jsr	.dv
+	lda	R0+2
+	bpl	div1
+	jmp	neg
+div1	jmp	mloop
+*
+.dv	ldy	#0		;divide the primary by the secondary
+	sty	VAL
+	sty	VAL+1
+	ldy	#$10
+.dv1	asl	R0
+	rol	R0+1
+	rol	VAL
+	rol	VAL+1
+	sec
+	lda	VAL
+	sbc	R1
+	tax
+	lda	VAL+1
+	sbc	R1+1
+	bcc	.dv2
+	stx	VAL
+	sta	VAL+1
+	inc	R0
+.dv2	dey
+	bne	.dv1
+	rts
+*
+mod	jsr	.sign		;primary % secondary
+	jsr	.dv
+	lda	VAL
+	sta	R0
+	lda	VAL+1
+	sta	R0+1
+	lda	R0+3
+	bpl	mod1
+	jmp	neg
+mod1	jmp	mloop
+*
+umod	jsr	.dv		;primary % secondary
+	lda	VAL
+	sta	R0
+	lda	VAL+1
+	sta	R0+1
+	jmp	mloop
+*
+.sign	lda	R0+1		;get sign of primary and secondary
+	sta	R0+3
+	eor	R1+1
+	sta	R0+2
+	lda	R0+1
+	bpl	.sign1
+	sec
+	tya
+	sbc	R0
+	sta	R0
+	tya
+	sbc	R0+1
+	sta	R0+1
+.sign1	lda	R1+1
+	bpl	.sign2
+	sec
+	tya
+	sbc	R1
+	sta	R1
+	tya
+	sbc	R1+1
+	sta	R1+1
+.sign2	rts
+*
+addps	clc			;add the secondary to the primary
+	lda	R0
+	adc	R1
+	sta	R0
+	lda	R0+1
+	adc	R1+1
+	sta	R0+1
+	jmp	mloop
+*
+subps	sec			;subtract the secondary from the primary
+	lda	R0
+	sbc	R1
+	sta	R0
+	lda	R0+1
+	sbc	R1+1
+	sta	R0+1
+	jmp	mloop
+*
+lshift	ldx	R1		;primary << secondary
+	bne	.ls2
+.ls0	dec	R1+1
+.ls1	bpl	.ls2
+	jmp	mloop
+.ls2	asl	R0
+	rol	R0+1
+	dex
+	beq	.ls0
+	bne	.ls2
+*
+rshift	lda	R0+1		;primary >> secondary
+	bpl	urshift
+	ldx	R1
+	bne	.rs2
+.rs0	dec	R1+1
+.rs1	bpl	.rs2
+	jmp	mloop
+.rs2	sec
+	ror	R0+1
+	ror	R0
+	dex
+	beq	.rs0
+	bne	.rs2
+*
+urshift	ldx	R1		;primary >> secondary
+	bne	.ur2
+.ur0	dec	R1+1
+.ur1	bpl	.ur2
+	jmp	mloop
+.ur2	lsr	R0+1
+	ror	R0
+	dex
+	beq	.ur0
+	bne	.ur2
+*
+andd	lda	R0		;primary & secondary -> primary
+	and	R1
+	sta	R0
+	lda	R0+1
+	and	R1+1
+	sta	R0+1
+	jmp	mloop
+*
+orr	lda	R0		;primary | secondary -> primary
+	ora	R1
+	sta	R0
+	lda	R0+1
+	ora	R1+1
+	sta	R0+1
+	jmp	mloop
+*
+xorr	lda	R0		;primary ^ secondary -> primary
+	eor	R1
+	sta	R0
+	lda	R0+1
+	eor	R1+1
+	sta	R0+1
+	jmp	mloop
+*
+eq	lda	R0+1		;primary == secondary
+	cmp	R1+1
+	sty	R0+1
+	bne	.eq1
+	lda	R0
+	cmp	R1
+	bne	.eq1
+	iny
+.eq1	sty	R0
+	jmp	mloop
+*
+ne	lda	R0+1		;primary != secondary
+	cmp	R1+1
+	sty	R0+1
+	bne	.ne1
+	lda	R0
+	cmp	R1
+	beq	.ne2
+.ne1	iny
+.ne2	sty	R0
+	jmp	mloop
+*
+lt	lda	R0		;primary < secondary
+	cmp	R1
+	lda	R0+1
+	sbc	R1+1
+	sty	R0+1
+	bpl	.lt1
+	iny
+.lt1	tya
+	bvc	.lt2
+	eor	#1
+.lt2	sta	R0
+	jmp	mloop
+*
+gt	lda	R1		;primary > secondary
+	cmp	R0
+	lda	R1+1
+	sbc	R0+1
+	sty	R0+1
+	bpl	.gt1
+	iny
+.gt1	tya
+	bvc	.gt2
+	eor	#1
+.gt2	sta	R0
+	jmp	mloop
+*
+le	lda	R1		;primary <= secondary
+	cmp	R0
+	lda	R1+1
+	sbc	R0+1
+	sty	R0+1
+	bmi	.le1
+	iny
+.le1	tya
+	bvc	.le2
+	eor	#1
+.le2	sta	R0
+	jmp	mloop
+*
+ge	lda	R0		;primary >= secondary
+	cmp	R1
+	lda	R0+1
+	sbc	R1+1
+	sty	R0+1
+	bmi	.ge1
+	iny
+.ge1	tya
+	bvc	.ge2
+	eor	#1
+.ge2	sta	R0
+	jmp	mloop
+*
+ult	lda	R0		;primary < secondary
+	cmp	R1
+	lda	R0+1
+	sbc	R1+1
+	sty	R0+1
+	bcs	.ul1
+	iny
+.ul1	sty	R0
+	jmp	mloop
+*
+ugt	lda	R1		;primary > secondary
+	cmp	R0
+	lda	R1+1
+	sbc	R0+1
+	sty	R0+1
+	bcs	.ug1
+	iny
+.ug1	sty	R0
+	jmp	mloop
+*
+ule	lda	R1		;primary <= secondary
+	cmp	R0
+	lda	R1+1
+	sbc	R0+1
+	sty	R0+1
+	bcc	.ue1
+	iny
+.ue1	sty	R0
+	jmp	mloop
+*
+uge	lda	R0		;primary >= secondary
+	cmp	R1
+	lda	R0+1
+	sbc	R1+1
+	sty	R0+1
+	bcc	.uf1
+	iny
+.uf1	sty	R0
+	jmp	mloop
+*
+not	lda	R0+1		;!primary -> primary
+	sty	R0+1
+	ora	R0
+	bne	not1
+	iny
+not1	sty	R0
+	jmp	mloop
+*
+neg	sec			;-primary -> primary
+	tya
+	sbc	R0
+	sta	R0
+	tya
+	sbc	R0+1
+	sta	R0+1
+	jmp	mloop
+*
+com	lda	R0		;~primary -> primary
+	eor	#$ff
+	sta	R0
+	lda	R0+1
+	eor	#$ff
+	sta	R0+1
+	jmp	mloop
+*
+swap	lda	R0		;exchange primary and secondary
+	ldx	R1
+	stx	R0
+	sta	R1
+	lda	R0+1
+	ldx	R1+1
+	stx	R0+1
+	sta	R1+1
+	jmp	mloop
+*
+incr	inc	R0		;increment the primary
+	bne	incr1
+	inc	R0+1
+incr1	jmp	mloop
+*
+decr	lda	R0		;decrement the primary
+	bne	decr1
+	dec	R0+1
+decr1	dec	R0
+	jmp	mloop
+*
+double	asl	R0		;double the primary register
+	rol	R0+1
+	jmp	mloop
+*
+ldfld	jsr	twobyte
+	ldy	#R0
+	jsr	.ldfld#
+	jmp	mloop
+*
+ldfldu	jsr	twobyte
+	ldy	#R0
+	jsr	.ldfldu#
+	jmp	mloop
+*
+stfld	jsr	twobyte
+	ldy	#R1
+	jsr	.stfld#
+	jmp	mloop
+*
+return	ldy	#7		;clean up stack and return
+	lda	FRAME
+	sta	R1
+	lda	FRAME+1
+	sta	R1+1
+return1	lda	(R1),Y
+	sta	VAL,Y
+	dey
+	bpl	return1
+	inc	VAL
+	bne	return2
+	inc	VAL+1
+	ldx	#0
+return2	jmp	(VAL)
+*
+	public	.unknown
+.unknown	brk
+*
+	public	brkpnt
+brkpnt	brk
+	jmp	mloop
+*
+*		support routines
+*
+onebyte	ldx	#0		;fetch and sign extend one byte operand
+	lda	(PC),Y
+	bpl	onebyt1
+	dex
+onebyt1	inc	PC
+	bne	onebyt2
+	inc	PC+1
+onebyt2	clc
+	rts
+*
+onelcl	clc			;fetch local address
+	ldx	#0
+	lda	(PC),Y
+	bpl	onelcl1
+	dex
+onelcl1	adc	FRAME
+	sta	VAL
+	txa
+	adc	FRAME+1
+	sta	VAL+1
+	inc	PC
+	bne	onelcl2
+	inc	PC+1
+onelcl2	clc
+	rts
+*
+twobyte	iny			;fetch two byte operand
+	lda	(PC),Y
+	tax
+	dey
+	lda	(PC),Y
+	pha
+	clc
+	lda	PC
+	adc	#2
+	sta	PC
+	bcc	twobyt1
+	inc	PC+1
+	clc
+twobyt1	pla
+	rts
+*
+	public	twoval
+twoval	lda	(PC),Y		;fetch two byte operand into VAL
+	sta	VAL
+	iny
+	lda	(PC),Y
+	sta	VAL+1
+	dey
+	clc
+	lda	PC
+	adc	#2
+	sta	PC
+	bcc	twoval1
+	inc	PC+1
+	clc
+twoval1	rts
+*
+	public	twolcl
+twolcl	clc			;fetch two byte local address into VAL
+	lda	(PC),Y
+	adc	FRAME
+	sta	VAL
+	iny
+	lda	(PC),Y
+	adc	FRAME+1
+	sta	VAL+1
+	dey
+	clc
+	lda	PC
+	adc	#2
+	sta	PC
+	bcc	twolcl1
+	inc	PC+1
+	clc
+twolcl1	rts
+*
+pshwrd	tay
+	sec
+	lda	SP
+	sbc	#2
+	sta	SP
+	bcs	pshwrd1
+	dec	SP+1
+pshwrd1	tya
+	ldy	#0
+	sta	(SP),Y
+	iny	
+	txa
+	sta	(SP),Y
+	jmp	mloop
+*
+*
+*
+jmpflt	jsr	.fltjmp#
+	jmp	mloop
+*
+*
+*
+*
+	public	LTAB
+LTAB
+	fcb	<shldlp0	;10
+	fcb	<shldlp1
+	fcb	<shldlp2
+	fcb	<shldlp3
+	fcb	<shldlp4
+	fcb	<shldlp5
+	fcb	<shldlp6
+	fcb	<shldlp7
+	fcb	<shldlp8
+	fcb	<shldlp9
+	fcb	<shldlpA
+	fcb	<shldlpB
+	fcb	<shldlpC
+	fcb	<shldlpD
+	fcb	<shldlpE
+	fcb	<shldlpF
+	fcb	<shldls0	;10
+	fcb	<shldls1
+	fcb	<shldls2
+	fcb	<shldls3
+	fcb	<shldls4
+	fcb	<shldls5
+	fcb	<shldls6
+	fcb	<shldls7
+	fcb	<shldls8
+	fcb	<shldls9
+	fcb	<shldlsA
+	fcb	<shldlsB
+	fcb	<shldlsC
+	fcb	<shldlsD
+	fcb	<shldlsE
+	fcb	<shldlsF
+	fcb	<shstl0		;20
+	fcb	<shstl1
+	fcb	<shstl2
+	fcb	<shstl3
+	fcb	<shstl4
+	fcb	<shstl5
+	fcb	<shstl6
+	fcb	<shstl7
+	fcb	<shstl8
+	fcb	<shstl9
+	fcb	<shstlA
+	fcb	<shstlB
+	fcb	<shstlC
+	fcb	<shstlD
+	fcb	<shstlE
+	fcb	<shstlF
+	fcb	<shpshl0	;30
+	fcb	<shpshl1
+	fcb	<shpshl2
+	fcb	<shpshl3
+	fcb	<shpshl4
+	fcb	<shpshl5
+	fcb	<shpshl6
+	fcb	<shpshl7
+	fcb	<shpshl8
+	fcb	<shpshl9
+	fcb	<shpshlA
+	fcb	<shpshlB
+	fcb	<shpshlC
+	fcb	<shpshlD
+	fcb	<shpshlE
+	fcb	<shpshlF
+	fcb	<shldip0	;40
+	fcb	<shldip1
+	fcb	<shldip2
+	fcb	<shldip3
+	fcb	<shldip4
+	fcb	<shldip5
+	fcb	<shldip6
+	fcb	<shldip7
+	fcb	<shldip8
+	fcb	<shldip9
+	fcb	<shldipA
+	fcb	<shldipB
+	fcb	<shldipC
+	fcb	<shldipD
+	fcb	<shldipE
+	fcb	<shldipF
+	fcb	<shldis0	;50
+	fcb	<shldis1
+	fcb	<shldis2
+	fcb	<shldis3
+	fcb	<shldis4
+	fcb	<shldis5
+	fcb	<shldis6
+	fcb	<shldis7
+	fcb	<shldis8
+	fcb	<shldis9
+	fcb	<shldisA
+	fcb	<shldisB
+	fcb	<shldisC
+	fcb	<shldisD
+	fcb	<shldisE
+	fcb	<shldisF
+	fcb	<shpshi0	;60
+	fcb	<shpshi1
+	fcb	<shpshi2
+	fcb	<shpshi3
+	fcb	<shpshi4
+	fcb	<shpshi5
+	fcb	<shpshi6
+	fcb	<shpshi7
+	fcb	<shpshi8
+	fcb	<shpshi9
+	fcb	<shpshiA
+	fcb	<shpshiB
+	fcb	<shpshiC
+	fcb	<shpshiD
+	fcb	<shpshiE
+	fcb	<shpshiF
+	fcb	<shaddi0	;70
+	fcb	<shaddi1
+	fcb	<shaddi2
+	fcb	<shaddi3
+	fcb	<shaddi4
+	fcb	<shaddi5
+	fcb	<shaddi6
+	fcb	<shaddi7
+	fcb	<shaddi8
+	fcb	<shaddi9
+	fcb	<shaddiA
+	fcb	<shaddiB
+	fcb	<shaddiC
+	fcb	<shaddiD
+	fcb	<shaddiE
+	fcb	<shaddiF
+	fcb	<.unknown			;80
+	fcb	<ldlps				;81
+	fcb	<ldlpl
+	fcb	<ldlss
+	fcb	<ldlsl
+	fcb	<stls
+	fcb	<stll
+	fcb	<pshls
+	fcb	<pshll
+	fcb	<ldips
+	fcb	<ldipl
+	fcb	<ldiss
+	fcb	<ldisl
+	fcb	<pshis
+	fcb	<pshil
+	fcb	<addis
+	fcb	<addil			;90
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown			;20
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<ldlpb			;A0
+	fcb	<ldlsb
+	fcb	<stlb
+	fcb	<pshlb
+	fcb	<ldgp
+	fcb	<ldgpb
+	fcb	<ldgs
+	fcb	<ldgsb
+	fcb	<stg
+	fcb	<stgb
+	fcb	<pshg
+	fcb	<pshgb
+	fcb	<callsub
+	fcb	<move
+	fcb	<ssps
+	fcb	<sspl
+	fcb	<lds			;B0
+	fcb	<sts
+	fcb	<jmpflt
+	fcb	<psh
+	fcb	<pul
+	fcb	<mult
+	fcb	<div
+	fcb	<.jmplng#
+	fcb	<udiv
+	fcb	<mod
+	fcb	<umod
+	fcb	<addps
+	fcb	<subps
+	fcb	<lshift
+	fcb	<urshift
+	fcb	<rshift
+	fcb	<eq				;C0
+	fcb	<ne
+	fcb	<lt
+	fcb	<le
+	fcb	<gt
+	fcb	<ge
+	fcb	<ult				;70
+	fcb	<ule
+	fcb	<ugt
+	fcb	<uge
+	fcb	<not
+	fcb	<neg
+	fcb	<com
+	fcb	<swap
+	fcb	<.unknown
+	fcb	<return
+	fcb	<incr				;D0
+	fcb	<decr
+	fcb	<double
+	fcb	<ldsb
+	fcb	<stsb
+	fcb	<fstswt
+	fcb	<brn
+	fcb	<btrue
+	fcb	<bfalse
+	fcb	<switch
+	fcb	<andd
+	fcb	<orr
+	fcb	<xorr
+	fcb	<callind
+	fcb	<leap
+	fcb	<leas
+	fcb	<ldfld					;E0
+	fcb	<ldfldu
+	fcb	<stfld
+	fcb	<brnb
+	fcb	<btb				;100
+	fcb	<bfb
+	fcb	<brnf
+	fcb	<btf
+	fcb	<bff
+	fcb	<calls
+	fcb	<calli
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown				;F0
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<.unknown
+	fcb	<brkpnt				;FF
+*
+*
+*
+HTAB
+	fcb	>shldlp0
+	fcb	>shldlp1
+	fcb	>shldlp2
+	fcb	>shldlp3
+	fcb	>shldlp4
+	fcb	>shldlp5
+	fcb	>shldlp6
+	fcb	>shldlp7
+	fcb	>shldlp8
+	fcb	>shldlp9
+	fcb	>shldlpA
+	fcb	>shldlpB
+	fcb	>shldlpC
+	fcb	>shldlpD
+	fcb	>shldlpE
+	fcb	>shldlpF
+	fcb	>shldls0
+	fcb	>shldls1
+	fcb	>shldls2
+	fcb	>shldls3
+	fcb	>shldls4
+	fcb	>shldls5
+	fcb	>shldls6
+	fcb	>shldls7
+	fcb	>shldls8
+	fcb	>shldls9
+	fcb	>shldlsA
+	fcb	>shldlsB
+	fcb	>shldlsC
+	fcb	>shldlsD
+	fcb	>shldlsE
+	fcb	>shldlsF
+	fcb	>shstl0
+	fcb	>shstl1
+	fcb	>shstl2
+	fcb	>shstl3
+	fcb	>shstl4
+	fcb	>shstl5
+	fcb	>shstl6
+	fcb	>shstl7
+	fcb	>shstl8
+	fcb	>shstl9
+	fcb	>shstlA
+	fcb	>shstlB
+	fcb	>shstlC
+	fcb	>shstlD
+	fcb	>shstlE
+	fcb	>shstlF
+	fcb	>shpshl0
+	fcb	>shpshl1
+	fcb	>shpshl2
+	fcb	>shpshl3
+	fcb	>shpshl4
+	fcb	>shpshl5
+	fcb	>shpshl6
+	fcb	>shpshl7
+	fcb	>shpshl8
+	fcb	>shpshl9
+	fcb	>shpshlA
+	fcb	>shpshlB
+	fcb	>shpshlC
+	fcb	>shpshlD
+	fcb	>shpshlE
+	fcb	>shpshlF
+	fcb	>shldip0
+	fcb	>shldip1
+	fcb	>shldip2
+	fcb	>shldip3
+	fcb	>shldip4
+	fcb	>shldip5
+	fcb	>shldip6
+	fcb	>shldip7
+	fcb	>shldip8
+	fcb	>shldip9
+	fcb	>shldipA
+	fcb	>shldipB
+	fcb	>shldipC
+	fcb	>shldipD
+	fcb	>shldipE
+	fcb	>shldipF
+	fcb	>shldis0
+	fcb	>shldis1
+	fcb	>shldis2
+	fcb	>shldis3
+	fcb	>shldis4
+	fcb	>shldis5
+	fcb	>shldis6
+	fcb	>shldis7
+	fcb	>shldis8
+	fcb	>shldis9
+	fcb	>shldisA
+	fcb	>shldisB
+	fcb	>shldisC
+	fcb	>shldisD
+	fcb	>shldisE
+	fcb	>shldisF
+	fcb	>shpshi0
+	fcb	>shpshi1
+	fcb	>shpshi2
+	fcb	>shpshi3
+	fcb	>shpshi4
+	fcb	>shpshi5
+	fcb	>shpshi6
+	fcb	>shpshi7
+	fcb	>shpshi8
+	fcb	>shpshi9
+	fcb	>shpshiA
+	fcb	>shpshiB
+	fcb	>shpshiC
+	fcb	>shpshiD
+	fcb	>shpshiE
+	fcb	>shpshiF
+	fcb	>shaddi0
+	fcb	>shaddi1
+	fcb	>shaddi2
+	fcb	>shaddi3
+	fcb	>shaddi4
+	fcb	>shaddi5
+	fcb	>shaddi6
+	fcb	>shaddi7
+	fcb	>shaddi8
+	fcb	>shaddi9
+	fcb	>shaddiA
+	fcb	>shaddiB
+	fcb	>shaddiC
+	fcb	>shaddiD
+	fcb	>shaddiE
+	fcb	>shaddiF
+	fcb	>.unknown			;0
+	fcb	>ldlps			;1
+	fcb	>ldlpl
+	fcb	>ldlss
+	fcb	>ldlsl
+	fcb	>stls
+	fcb	>stll
+	fcb	>pshls
+	fcb	>pshll
+	fcb	>ldips
+	fcb	>ldipl			;10
+	fcb	>ldiss
+	fcb	>ldisl
+	fcb	>pshis
+	fcb	>pshil
+	fcb	>addis
+	fcb	>addil
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown			;20
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown			;30
+	fcb	>.unknown			;31
+	fcb	>ldlpb			;32
+	fcb	>ldlsb
+	fcb	>stlb
+	fcb	>pshlb
+	fcb	>ldgp
+	fcb	>ldgpb
+	fcb	>ldgs
+	fcb	>ldgsb
+	fcb	>stg				;40
+	fcb	>stgb
+	fcb	>pshg
+	fcb	>pshgb
+	fcb	>callsub
+	fcb	>move
+	fcb	>ssps
+	fcb	>sspl
+	fcb	>lds
+	fcb	>sts
+	fcb	>jmpflt
+	fcb	>psh
+	fcb	>pul
+	fcb	>mult
+	fcb	>div
+	fcb	>.jmplng#
+	fcb	>udiv
+	fcb	>mod
+	fcb	>umod
+	fcb	>addps
+	fcb	>subps				;60
+	fcb	>lshift
+	fcb	>urshift
+	fcb	>rshift
+	fcb	>eq
+	fcb	>ne
+	fcb	>lt
+	fcb	>le
+	fcb	>gt
+	fcb	>ge
+	fcb	>ult				;70
+	fcb	>ule
+	fcb	>ugt
+	fcb	>uge
+	fcb	>not
+	fcb	>neg
+	fcb	>com
+	fcb	>swap
+	fcb	>.unknown
+	fcb	>return
+	fcb	>incr				;80
+	fcb	>decr
+	fcb	>double
+	fcb	>ldsb
+	fcb	>stsb
+	fcb	>fstswt
+	fcb	>brn
+	fcb	>btrue
+	fcb	>bfalse
+	fcb	>switch
+	fcb	>andd				;90
+	fcb	>orr
+	fcb	>xorr
+	fcb	>callind
+	fcb	>leap
+	fcb	>leas				;95
+	fcb	>ldfld
+	fcb	>ldfldu
+	fcb	>stfld
+	fcb	>brnb
+	fcb	>btb				;100
+	fcb	>bfb
+	fcb	>brnf
+	fcb	>btf
+	fcb	>bff
+	fcb	>calls
+	fcb	>calli
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown				;110
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown				;120
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>.unknown
+	fcb	>brkpnt				;127
+*
+*

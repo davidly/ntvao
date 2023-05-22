@@ -1,0 +1,45 @@
+;
+; Startup for running apps built with the Aztec C compiler for Apple II 
+; on an Apple 1. Override the global entry function so the app can exit on an Apple 1.
+
+; Apple 1 monitor API
+
+exitapp equ    $ff1f          ; ends the app / returns to the Apple 1 monitor
+prbyte  equ    $ffdc          ; sends the value in a to the console in hex
+prchar  equ    $ffef          ; sends the ascii character in A to the terminal
+
+        dseg
+        cseg
+        entry my_entry_
+        public  my_entry_
+        public .begin
+my_entry_
+        ; the Apple II stores "applesoft himem" (the highest available RAM location) here.
+        ; Aztec's .begin function requires this be set to something reasonable.
+        ; Also initialize the Aztec global storage to make debugging easier.
+
+        lda     #0
+        sta     $00
+        sta     $01
+        sta     $02
+        sta     $03
+        sta     $04
+        sta     $05
+        sta     $06
+        sta     $07
+        sta     $73  ; himem
+        sta     $4C  ; "integer" basic? location
+        lda     #$80 ; below the basic interpreter and above where code likely exists
+        sta     $74  ; high part of above
+        sta     $4D  ; high part of above
+
+        jsr     .begin
+
+        ; .begin calls's the internal _main_, which calls C's _main, which returns, then _main_ calls exit(), which fails on Apple 1 of course
+        ; so we won't come back here. C apps on Apple 1 should exit on their own.
+
+        dseg
+        cseg
+        end
+
+     

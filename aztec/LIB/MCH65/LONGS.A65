@@ -1,0 +1,552 @@
+*:ts=8
+*
+* Copyright (c) 1983,85 by Manx Software Systems, Inc.
+*
+	instxt	"zpage.h"
+*
+	public	.lngused
+.lngused
+	public	.jmplng
+.jmplng	lda	(PC),Y
+	inc	PC
+	bne	jmplng1
+	inc	PC+1
+jmplng1	asl	A
+	tax
+	lda	LTAB-2,X
+	sta	VAL
+	lda	LTAB-1,X
+	sta	VAL+1
+	lda	#>mloop#-1
+	pha
+	lda	#<mloop#-1
+	pha
+	jmp	(VAL)
+*
+
+LTAB	fdb	.mulx
+	fdb	.divx
+	fdb	.addx
+	fdb	.subx
+	fdb	.negx
+	fdb	.eqx
+	fdb	.nex
+	fdb	.ltx
+	fdb	.lex
+	fdb	.gtx
+	fdb	.gex
+	fdb	.ldlpx
+	fdb	.ldlsx
+	fdb	.stlx
+	fdb	.pshlx
+	fdb	.ldgpx
+	fdb	.ldgsx
+	fdb	.stgx
+	fdb	.pshgx
+	fdb	.pshx
+	fdb	.pulx
+	fdb	.ldsx
+	fdb	.stsx
+	fdb	.ldipx
+	fdb	.ldisx
+	fdb	.swapx
+	fdb	.inrx
+	fdb	.dcrx
+	fdb	.tstx
+	fdb	.modx
+	fdb	.shlx
+	fdb	.asrx
+	fdb	.cmlx
+	fdb	.ndx
+	fdb	.orx
+	fdb	.xorx
+	fdb	.itox
+	fdb	.utox
+	fdb	.xtoi
+	fdb	.notx
+	fdb	.ultx
+	fdb	.ulex
+	fdb	.ugtx
+	fdb	.ugex
+	fdb	.shrx
+	fdb	.udvx
+	fdb	.umdx
+
+*
+.mulx	sty	R2
+	sty	R2+1
+	sty	R2+2
+	sty	R2+3
+	ldy	#$20
+.lm1	lda	R0
+	lsr	A
+	bcc	.lm3
+	clc
+	ldx	#-4
+.lm2	lda	R2+4,X
+	adc	R1+4,X
+	sta	R2+4,X
+	inx
+	bne	.lm2
+.lm3	lsr	R2+3
+	ror	R2+2
+	ror	R2+1
+	ror	R2
+	ror	R0+3
+	ror	R0+2
+	ror	R0+1
+	ror	R0
+	dey
+	bne	.lm1
+	rts
+*
+.divx	jsr	.ldv		;divide primary by secondary (long)
+	lda	TMP
+	bpl	.divx1
+	jmp	.negx
+.divx1	rts
+*
+.udvx	jmp	.ldv3		;divide primary by secondary (unsigned long)
+*
+.ldv	lda	R0+3
+	sta	TMP+1
+	eor	R1+3
+	sta	TMP
+	lda	R0+3
+	bpl	.ldv1
+	jsr	.negx
+.ldv1	lda	R1+3
+	bpl	.ldv3
+	ldx	#-4
+.ldv2	lda	#0
+	sbc	R1+4,X
+	sta	R1+4,X
+	inx
+	bne	.ldv2
+.ldv3	lda	#0
+	sta	R2
+	sta	R2+1
+	sta	R2+2
+	sta	R2+3
+	ldy	#$20
+.ld1	asl	R0
+	rol	R0+1
+	rol	R0+2
+	rol	R0+3
+	rol	R2
+	rol	R2+1
+	rol	R2+2
+	rol	R2+3
+	sec
+	lda	R2
+	sbc	R1
+	sta	VAL
+	lda	R2+1
+	sbc	R1+1
+	sta	VAL+1
+	lda	R2+2
+	sbc	R1+2
+	tax
+	lda	R2+3
+	sbc	R1+3
+	bcc	.ld2
+	stx	R2+2
+	sta	R2+3
+	lda	VAL
+	sta	R2
+	lda	VAL+1
+	sta	R2+1
+	inc	R0
+.ld2	dey
+	bne	.ld1
+	rts
+*
+.umdx	jsr	.ldv3		;modulo primary by secondary (unsigned long)
+	sty	TMP+1
+	ldx	#3
+	bne	modx1
+*
+.modx	jsr	.ldv		;modulo primary by secondary (long)
+	ldx	#3
+modx1	lda	R2,X
+	sta	R0,X
+	dex
+	bpl	modx1
+	lda	TMP+1
+	bmi	modx2
+	rts
+modx2	jmp	.negx
+*
+.addx	clc			;add primary and secondary (long)
+	ldx	#-4
+addx1	lda	R0+4,X
+	adc	R1+4,X
+	sta	R0+4,X
+	inx
+	bne	addx1
+	rts
+*
+.subx	sec			;subtract secondary from primary (long)
+	ldx	#-4
+subx1	lda	R0+4,X
+	sbc	R1+4,X
+	sta	R0+4,X
+	inx
+	bne	subx1
+	rts
+*
+.shlx	clc			;shift R0 left R1 times (long)
+	ldy	#-1
+	ldx	#-4
+shlx1	tya
+	adc	R1+4,X
+	sta	R1+4,X
+	inx
+	bne	shlx1
+	tax
+	bpl	shlx2
+	rts
+shlx2	asl	R0
+	rol	R0+1
+	rol	R0+2
+	rol	R0+3
+	jmp	.shlx
+*
+.asrx	clc			;rotate R0 right R1 times (long)
+	lda	R0+3
+	bpl	asrx1
+	sec
+asrx1	php
+asrx2	clc
+	ldy	#-1
+	ldx	#-4
+asrx3	tya
+	adc	R1+4,X
+	sta	R1+4,X
+	inx
+	bne	asrx3
+	tax
+	bpl	asrx4
+	plp
+	rts
+asrx4	plp
+	php
+	ror	R0+3
+	ror	R0+2
+	ror	R0+1
+	ror	R0
+	jmp	asrx2
+*
+.shrx	clc			;shift R0 right R1 times (unsigned long)
+	ldy	#-1
+	ldx	#-4
+shrx1	tya
+	adc	R1+4,X
+	sta	R1+4,X
+	inx
+	bne	shrx1
+	tax
+	bpl	shrx2
+	rts
+shrx2	lsr	R0+3
+	ror	R0+2
+	ror	R0+1
+	ror	R0
+	jmp	.shrx
+*
+.cmlx	ldx	#3		;complement the primary (long)
+cmlx1	lda	R0,X
+	eor	#$FF
+	sta	R0,X
+	dex
+	bpl	cmlx1
+	rts
+*
+.ndx	ldx	#3		;and primary and secondary (long)
+ndx1	lda	R0,X
+	and	R1,X
+	sta	R0,X
+	dex
+	bpl	ndx1
+	rts
+*
+.orx	ldx	#3		;or primary and secondary (long)
+orx1	lda	R0,X
+	ora	R1,X
+	sta	R0,X
+	dex
+	bpl	orx1
+	rts
+*
+.xorx	ldx	#3		;xor primary and secondary (long)
+xorx1	lda	R0,X
+	eor	R1,X
+	sta	R0,X
+	dex
+	bpl	xorx1
+	rts
+*
+.negx	sec			;negate primary (long)
+	ldx	#-4
+negx1	tya
+	sbc	R0+4,X
+	sta	R0+4,X
+	inx
+	bne	negx1
+	rts
+*
+.notx	jsr	.tstx		;logical not (long)
+	lda	R0
+	eor	#1		;reverse sense
+	rts
+*
+.tstx	ldx	#3		;test primary against 0
+tstx1	lda	R0,X
+	bne	.true
+	dex
+	bpl	tstx1
+	bmi	.false
+*
+.eqx	ldx	#3		;primary == secondary (long)
+eqx1	lda	R0,X
+	cmp	R1,X
+	bne	.false
+	dex
+	bpl	eqx1
+.true	sty	R0+1
+	iny
+	sty	R0
+	rts
+*
+.nex	ldx	#3		;primary != secondary (long)
+nex1	lda	R0,X
+	cmp	R1,X
+	bne	.true
+	dex
+	bpl	nex1
+.false	sty	R0+1
+	sty	R0
+	rts
+*
+.ltx	jsr	r0r1		;primary < secondary (long)
+	bpl	.ltx1
+	iny
+.ltx1	tya
+	bvc	.ltx2
+	eor	#1
+.ltx2	sta	R0
+	rts
+*
+.ultx	jsr	r0r1		;primary < secondary (unsigned long)
+	bcs	.ultx1
+	iny
+.ultx1	sty	R0
+	rts
+*
+.gtx	jsr	r1r0		;primary > secondary (long)
+	bpl	.gtx1
+	iny
+.gtx1	tya
+	bvc	.gtx2
+	eor	#1
+.gtx2	sta	R0
+	rts
+*
+.ugtx	jsr	r1r0		;primary > secondary (unsigned long)
+	bcs	.ugtx1
+	iny
+.ugtx1	sty	R0
+	rts
+*
+.lex	jsr	r1r0		;primary <= secondary (long)
+	bmi	.lex1
+	iny
+.lex1	tya
+	bvc	.lex2
+	eor	#1
+.lex2	sta	R0
+	rts
+*
+.ulex	jsr	r1r0		;primary <= secondary (unsigned long)
+	bcc	.ulex1
+	iny
+.ulex1	sty	R0
+	rts
+*
+.gex	jsr	r0r1		;primary >= secondary (long)
+	bmi	.gex1
+	iny
+.gex1	tya
+	bvc	.gex2
+	eor	#1
+.gex2	sta	R0
+	rts
+*
+.ugex	jsr	r0r1		;primary >= secondary (unsigned long)
+	bcc	.ugex1
+	iny
+.ugex1	sty	R0
+	rts
+*
+r0r1	lda	R0		;compare primary and secondary (long)
+	cmp	R1
+	lda	R0+1
+	sbc	R1+1
+	sty	R0+1
+	lda	R0+2
+	sbc	R1+2
+	lda	R0+3
+	sbc	R1+3
+	rts
+*
+r1r0	lda	R1		;compare secondary and primary (long)
+	cmp	R0
+	lda	R1+1
+	sbc	R0+1
+	sty	R0+1
+	lda	R1+2
+	sbc	R0+2
+	lda	R1+3
+	sbc	R0+3
+	rts
+*
+.itox	lda	R0+1		;cast integer to long
+	bpl	.utox
+	ldy	#-1
+.utox	sty	R0+2		;cast unsigned to long
+	sty	R0+3
+.xtoi	rts			;cast long to integer
+*
+*
+.ldipx	lda	(PC),Y		;load primary immediate (long)
+	sta	R0,Y
+	iny
+	cpy	#4
+	bne	.ldipx
+	beq	ldisx1
+*
+.ldisx	lda	(PC),Y		;load secondary immediate (long)
+	sta	R1,Y
+	iny
+	cpy	#4
+	bne	.ldisx
+ldisx1	lda	PC
+	adc	#3
+	sta	PC
+	bcc	ldisx3
+	inc	PC+1
+ldisx3	rts
+*
+.dcrx	ldy	#-1		; decrement primary (long)
+	tya
+	bne	inrx1
+*
+.inrx	lda	#1		;increment primary (long)
+inrx1	clc
+	ldx	#1
+	adc	R0
+	sta	R0
+	ror	A			;save carry
+inrx2	rol	A		;get carry back
+	tya
+	adc	R0,X
+	sta	R0,X
+	ror	A			;save carry
+	inx
+	cpx	#4
+	bne	inrx2
+	rts
+*
+.stsx	jsr	pul0#		;store primary through secondary (long)
+	ldy	#3
+stsx1	lda	R0,Y
+	sta	(R1),Y
+	dey
+	bpl	stsx1
+	rts
+*
+.swapx	ldx	#3		; swap primary and secondary (long)
+swapx1	lda	R0,X
+	ldy	R1,X
+	sta	R1,X
+	sty	R0,X
+	dex
+	bpl	swapx1
+	rts
+*
+.ldlpx	jsr	twolcl#		;load local into primary (long)
+ldpx	ldy	#3
+ldpx1	lda	(VAL),Y
+	sta	R0,Y
+	dey
+	bpl	ldpx1
+	rts
+*
+.ldlsx	jsr	twolcl#		;load local into secondary (long)
+ldlsx1	ldy	#3
+ldlsx2	lda	(VAL),Y
+	sta	R1,Y
+	dey
+	bpl	ldlsx2
+	rts
+*
+.stlx	jsr	twolcl#		;store local from primary (long)
+stpx	ldy	#3
+stpx1	lda	R0,Y
+	sta	(VAL),Y
+	dey
+	bpl	stpx1
+	rts
+*
+.pshlx	jsr	twolcl#		;psh local (long)
+	bcc	pshgx1
+*
+.ldgpx	jsr	twoval#		;load global into primary (long)
+	bcc	ldpx
+*
+.ldgsx	jsr	twoval#		;load global into secondary (long)
+	bcc	ldlsx1
+*
+.stgx	jsr	twoval#		;store global from primary (long)
+	bcc	stpx
+*
+.pshgx	jsr	twoval#		;push global (long)
+pshgx1	sec
+	lda	SP
+	sbc	#4
+	sta	SP
+	bcs	pshgx2
+	dec	SP+1
+pshgx2	ldy	#3
+pshgx3	lda	(VAL),Y
+	sta	(SP),Y
+	dey
+	bpl	pshgx3
+	rts
+*
+.pshx	lda	#<R0		;push primary onto stack (long)
+	sta	VAL
+	sty	VAL+1
+	jmp	pshgx1
+*
+.pulx	ldy	#3		;pull secondary from stack
+pulx1	lda	(SP),Y
+	sta	R1,Y
+	dey
+	bpl	pulx1
+	clc
+	lda	SP
+	adc	#4
+	sta	SP
+	bcc	pulx2
+	inc	SP+1
+pulx2	rts
+*
+.ldsx	lda	R0		;load primary through primary (long)
+	sta	VAL
+	lda	R0+1
+	sta	VAL+1
+	jmp	ldpx
+*
+*
+	cseg

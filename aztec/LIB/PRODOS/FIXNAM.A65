@@ -1,0 +1,6 @@
+;:ts=8
+	public	fixnam_
+fixnam_
+	jmp	_fixnam_
+	public	_fixnam_
+

@@ -1,0 +1,15 @@
+.SUFFIXES:.a65 .r
+CFLAGS=
+
+.c.r:
+	c65 $(CFLAGS) $*.c
+
+.a65.r:
+	as65 $*.a65
+
+TERM=apple2e.r u6551.r acumcrc.r
+SRC= ttymake tty.c apple2e.a65 u6551.a65 acumcrc.a65 signon.c
+
+tty.bin:	tty.r signon.r $(TERM) 
+	ln65 -mt tty.r $(TERM) signon.i -lc
+	strip65 <tty >tty.bin

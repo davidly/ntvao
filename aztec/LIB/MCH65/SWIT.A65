@@ -1,0 +1,54 @@
+*:ts=8
+*
+* Copyright (C) 1983,84,85 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+	public	.swit
+.swit	pla
+	sta	VAL
+	pla
+	sta	VAL+1
+	ldy	#1
+	lda	(VAL),Y
+	tax
+	iny
+	lda	(VAL),Y
+	sta	TMP
+	clc
+	lda	VAL
+	adc	#3
+	sta	VAL
+	bcc	switch1
+	inc	VAL+1
+switch1	ldy	#0
+	txa
+	bne	switch2
+	dec	TMP
+	bpl	switch2
+	dey
+	bne	switch4
+switch2	dex
+	lda	(VAL),Y
+	cmp	R0
+	bne	switch3
+	iny
+	lda	(VAL),Y
+	cmp	R0+1
+	beq	switch4
+switch3	clc
+	lda	VAL
+	adc	#4
+	sta	VAL
+	bcc	switch1
+	inc	VAL+1
+	bcs	switch1
+switch4	iny
+	lda	(VAL),Y
+	sta	R0
+	iny
+	lda	(VAL),Y
+	sta	R0+1
+	ldx	#0
+	jmp	(R0)
+*

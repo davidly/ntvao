@@ -1,0 +1,61 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	int
+*	strequ(s1, s2)
+*	  char *s1, *s2;
+*
+*	compare str1 with str2 regardless of case
+*
+
+S1	equ	R0+2
+S2	equ	R0+4
+
+	public	strequ_
+strequ_
+	ldy	#5
+load	lda	(SP),Y		;copy args to registers
+	sta	R0,Y
+	dey
+	bne	load
+	beq	skip
+mainlp	iny			;main loop
+	bne	skip
+	inc	S1+1
+	inc	S2+1
+skip	lda	(S1),Y		;get next char from s1
+	bne	compare		;non-zero, go compare it
+	lda	(S2),Y		;check if both zero
+	bne	less		;no, must be less
+
+equal	ldy	#0		;equal case
+	beq	done
+less	ldy	#-1		;return -1
+done	sty	R0
+	sty	R0+1
+	rts
+
+compare	cmp	#'A		;compare to A
+	bcc	comp1
+	cmp	#'Z+1
+	bcs	comp1
+	adc	#'a-'A
+comp1	sta	R0
+	lda	(S2),Y		;compare to other string
+	cmp	#'A		;compare to A
+	bcc	comp2
+	cmp	#'Z+1
+	bcs	comp2
+	adc	#'a-'A
+comp2	cmp	R0
+	beq	mainlp		;same, continue
+	bcs	less		;less, return it
+	ldy	#0		;else must be greater
+	sty	R0+1
+	iny			;return 1
+	sty	R0
+	rts
+

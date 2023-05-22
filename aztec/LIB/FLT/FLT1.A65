@@ -1,0 +1,906 @@
+*:ts=8
+* Copyright (c) 1982,1985 by Manx Software Systems
+*
+*
+	instxt	<zpage.h>
+
+
+PREC	EQU	8
+
+	global	Sysvec_,8
+	global	flterr_,2
+
+	dseg
+*
+acc3	rmb	PREC+2
+SIZ	rmb	1
+TMP0	rmb	1
+TMP1	rmb	1
+TMP2	rmb	1
+*
+	cseg
+	public	.flt1
+.flt1
+*
+	public	.lsacc
+	public	.ldacc
+	public	.lssec
+	public	.ldsec
+	public	.ssacc
+	public	.sdacc
+	public	.addd
+	public	.subd
+	public	.muld
+	public	.divd
+	public	.eqd
+	public	.ned
+	public	.ltd
+	public	.led
+	public	.gtd
+	public	.ged
+	public	.swapd
+	public	.tstd
+	public	.dtoi
+	public	.dtou
+	public	.dtox
+	public	.itod
+	public	.utod
+	public	.xtod
+	public	.rndit
+	public	.stflt
+*
+	cseg
+*
+*
+*
+*	load packed float pointed at by VAL into sec
+*
+.lssec	lda	#5
+	bne	ldsec1
+.ldsec	lda	#9
+ldsec1	sta	SIZ
+	jsr	.swapd
+	jsr	ldflt
+	jmp	.swapd
+*
+*	load packed float pointed at by VAL into acc
+*
+.lsacc	lda	#5
+	bne	ldacc1
+	public	.ldacc
+.ldacc	lda	#9
+ldacc1	sta	SIZ
+*
+*	called with VAL pointing at packed float
+*
+ldflt	ldy	#0
+	lda	(VAL),Y
+	sta	(ACC),Y
+	iny
+	and	#$7F
+	sec
+	sbc	#64
+	sta	(ACC),Y
+	lda	VAL
+	bne	ldflt1
+	dec	VAL+1
+ldflt1	dec	VAL
+	iny
+ldflt2	lda	(VAL),Y
+	sta	(ACC),Y
+	iny
+	cpy	SIZ
+	bne	ldflt2
+	lda	#0
+ldflt3	sta	(ACC),Y
+	iny
+	cpy	#PREC+2
+	bne	ldflt3
+	tay
+	rts
+*
+*	store acc into location in VAL
+*
+.ssacc	ldy	#5
+	bne	.stflt
+.sdacc	ldy	#9
+*
+*	store float pointed at by ACC into location in VAL
+*
+.stflt	sty	SIZ
+	jsr	.rndit
+	lda	VAL
+	bne	stflt1
+	dec	VAL+1
+stflt1	dec	VAL
+	ldy	SIZ
+	dey
+stflt2	lda	(ACC),Y
+	sta	(VAL),Y
+	dey
+	cpy	#1
+	bne	stflt2
+	clc
+	lda	(ACC),Y
+	adc	#64
+	sta	SIZ
+	dey
+	lda	(ACC),Y
+	and	#$80
+	ora	SIZ
+	iny
+	sta	(VAL),Y
+	rts
+*
+*	round the result in the ACC
+*
+	public	.rndit
+.rndit	lda	(ACC),Y
+	bmi	rndit2
+rndit1	rts
+rndit2	sty	TMP1
+	lda	#0
+	sta	(ACC),Y
+	dey
+	tya
+	tax
+	dex
+	sec
+rndit3	lda	(ACC),Y
+	adc	#0
+	sta	(ACC),Y
+	dey
+	dex
+	bne	rndit3
+	bcc	rndit1
+rndit4	ldy	#2
+	ldx	#1
+rndit5	lda	(ACC),Y
+	sta	TMP2
+	txa
+	sta	(ACC),Y
+	ldx	TMP2
+	iny
+	cpy	TMP1
+	bne	rndit5
+	ldx	#0
+	ldy	#1
+	clc
+	tya
+	adc	(ACC),Y
+	sta	(ACC),Y
+	cmp	#65
+	bne	rndit1
+	jmp	ovrflow
+*
+*	subtract secondary from primary
+*
+.subd	ldy	#0
+	lda	(SEC),Y
+	eor	#$80
+	sta	(SEC),Y
+*
+*	add secondary to primary
+*
+	public	.addd
+.addd	ldy	#1
+	lda	(ACC),Y
+	cmp	(SEC),Y
+	beq	add3
+	bmi	add1
+	jsr	.swapd
+add1	ldy	#2
+	ldx	#0
+add1a	lda	(ACC),Y
+	sta	SIZ
+	txa
+	sta	(ACC),Y
+	ldx	SIZ
+	iny
+	cpy	#PREC+2
+	bne	add1a
+	ldx	#0
+	jsr	tstman
+	bne	add2
+	jmp	.swapd
+add2	clc
+	ldy	#1
+	tya
+	adc	(ACC),Y
+	sta	(ACC),Y
+	jmp	.addd
+add3	dey
+	lda	(ACC),Y
+	eor	(SEC),Y
+	bmi	add7
+	clc
+	ldx	#PREC
+	ldy	#PREC+1
+add4	lda	(ACC),Y
+	adc	(SEC),Y
+	sta	(ACC),Y
+	dey
+	dex
+	bne	add4
+	bcs	add6
+add5	rts
+add6	ldy	#PREC+2
+	sty	TMP1
+	jmp	rndit4
+add7	lda	(ACC),Y
+	bpl	add7a
+	jsr	.swapd
+add7a	sec
+	ldx	#PREC
+	ldy	#PREC+1
+add8	lda	(ACC),Y
+	sbc	(SEC),Y
+	sta	(ACC),Y
+	dey
+	dex
+	bne	add8
+	bcs	add10
+	ldy	#0
+	lda	#$80
+	sta	(ACC),Y
+	ldy	#PREC+1
+	ldx	#PREC
+	sec
+add9	lda	#0
+	sbc	(ACC),Y
+	sta	(ACC),Y
+	dey
+	dex
+	bne	add9
+add10	jsr	tstman
+	bne	add11
+	lda	#$0
+	tay
+	sta	(ACC),Y
+	iny
+	lda	#-64
+	sta	(ACC),Y
+	rts
+add11	jmp	normal
+*
+*	normalize the number in the acc
+*
+normal	ldy	#2
+	lda	(ACC),Y
+	beq	norm1
+	rts
+norm1	ldy	#PREC+1
+	ldx	#0
+norm2	lda	(ACC),Y
+	sta	SIZ
+	txa
+	sta	(ACC),Y
+	ldx	SIZ
+	dey
+	cpy	#1
+	bne	norm2
+	ldx	#0
+	lda	(ACC),Y
+	cmp	#-64
+	bne	norm3
+	jmp	undflow
+norm3	sec
+	sbc	#1
+	sta	(ACC),Y
+	jmp	normal
+*
+*	test mantissa of acc
+*
+tstman	ldy	#2
+tstman1	lda	(ACC),Y
+	bne	tstman2
+	iny
+	cpy	#PREC+2
+	bne	tstman1
+tstman2	tay
+	rts
+*
+*	multiply acc by sec, result in acc
+*
+	public	.muld
+.muld	ldy	#1
+	lda	(ACC),Y
+	cmp	#-64
+	beq	mul1
+	lda	(SEC),Y
+	cmp	#-64
+	bne	mul2
+mul1	jmp	dozero
+mul2	dey
+	lda	(ACC),Y
+	eor	(SEC),Y
+	sta	(ACC),Y
+	iny
+	clc
+	lda	(ACC),Y
+	adc	(SEC),Y
+	sta	(ACC),Y
+	bmi	mul3
+	cmp	#65
+	bcc	mul4
+	jmp	ovrflow
+mul3	cmp	#-64
+	bcs	mul4
+	jmp	undflow
+mul4	ldy	#2
+	ldx	#0
+mul5	lda	(ACC),Y
+	sta	acc3,Y
+	txa
+	sta	(ACC),Y
+	iny
+	cpy	#PREC+2
+	bne	mul5
+	ldy	#PREC
+	sty	SIZ
+mul6	ldy	SIZ
+	lda	acc3+1,Y
+	bne	mul8
+	ldy	#2
+	ldx	#0
+mul7	lda	(ACC),Y
+	sta	TMP0
+	txa
+	sta	(ACC),Y
+	ldx	TMP0
+	iny
+	cpy	#PREC+2
+	bne	mul7
+	ldx	#0
+	beq	mul14
+mul8	sta	TMP0
+	sec
+	bcs	mul10
+mul9	clc
+mul10	ror	TMP0
+	bcc	mul12
+	clc
+	ldy	#PREC+1
+	ldx	#PREC
+mul11	lda	(ACC),Y
+	adc	(SEC),Y
+	sta	(ACC),Y
+	dey
+	dex
+	bne	mul11
+mul12	ldy	#2
+	ldx	#PREC
+mul13	lda	(ACC),Y
+	ror	A
+	sta	(ACC),Y
+	iny
+	dex
+	bne	mul13
+	lda	TMP0
+	lsr	A
+	bne	mul9
+mul14	dec	SIZ
+	bne	mul6
+	jsr	tstman
+	bne	mul15
+	jmp	dozero
+mul15	jmp	normal
+*
+*	divide the two doubles
+*
+.divd	lda	SEC
+	sta	VAL
+	lda	SEC+1
+	sta	VAL+1
+	jsr	tstd1
+	bne	ddiv1
+	jmp	div0
+ddiv1	jsr	.tstd
+	bne	ddiv2
+	jmp	dozero
+ddiv2	ldy	#0
+	lda	(ACC),Y
+	eor	(SEC),Y
+	sta	(ACC),Y
+	iny
+	sec
+	lda	(ACC),Y
+	sbc	(SEC),Y
+	sta	(ACC),Y
+	bmi	ddiv3
+	cmp	#65
+	bcc	ddiv4
+	jmp	ovrflow
+ddiv3	cmp	#-64
+	bcs	ddiv4
+	jmp	undflow
+ddiv4	ldy	#2
+ddiv5	lda	(ACC),Y
+	cmp	(SEC),Y
+	bcc	ddiv7		;u < v
+	bne	ddiv6		;u > v
+	iny
+	cpy	#PREC+2
+	bne	ddiv5
+ddiv6	ldy	#1		;u >= v
+	clc
+	lda	(ACC),Y
+	adc	#1
+	sta	(ACC),Y
+	ldx	#2
+	lda	#0
+	sta	acc3,X
+	inx
+	bne	ddiv8
+ddiv7	ldx	#2		;u < v
+ddiv8	ldy	#2
+ddiv9	lda	(ACC),Y
+	sta	acc3,X
+	lda	#0
+	sta	(ACC),Y
+	iny
+	inx
+	cpx	#PREC+2
+	bne	ddiv9
+	ldy	#PREC+1
+	sta	(ACC),Y
+	ldx	#PREC*8
+	stx	SIZ
+ddiv10	ldy	#PREC+1
+	ldx	#PREC
+	clc
+ddiv11	lda	(ACC),Y
+	rol	A
+	sta	(ACC),Y
+	dey
+	dex
+	bne	ddiv11
+	ldy	#PREC-1
+ddiv12	lda	acc3+2,Y
+	rol	A
+	sta	acc3+2,Y
+	dey
+	bpl	ddiv12
+	bcs	ddivj
+	ldy	#2
+ddiv13	lda	acc3,Y
+	cmp	(SEC),Y
+	bcc	ddiv16
+	bne	ddiv14
+	iny
+	cpy	#PREC+2
+	bne	ddiv13
+ddivj	sec
+ddiv14	ldy	#PREC+1
+	ldx	#PREC
+ddiv15	lda	acc3,Y
+	sbc	(SEC),Y
+	sta	acc3,Y
+	dey
+	dex
+	bne	ddiv15
+	ldy	#PREC+1
+	clc
+	lda	(ACC),Y
+	adc	#1
+	sta	(ACC),Y
+ddiv16	dec	SIZ
+	bne	ddiv10
+	jmp	normal
+*
+*	swap the two accumulators
+*
+	public	.swapd
+.swapd	lda	ACC
+	ldx	SEC
+	sta	SEC
+	stx	ACC
+	lda	ACC+1
+	ldx	SEC+1
+	sta	SEC+1
+	stx	ACC+1
+	ldx	#0
+	rts
+*
+.eqd	jsr	dcmp
+	beq	true
+false	lda	#0
+	sta	R0
+	sta	R0+1
+	rts
+*
+.ned	jsr	dcmp
+	beq	false
+true	ldx	#1
+	stx	R0
+	dex
+	stx	R0+1
+	rts
+*
+.ltd	jsr	dcmp
+	bmi	true
+	bpl	false
+*
+.led	jsr	dcmp
+	bmi	true
+	beq	true
+	bne	false
+*
+.gtd	jsr	dcmp
+	bmi	false
+	beq	false
+	bne	true
+*
+.ged	jsr	dcmp
+	bmi	false
+	bpl	true
+*
+dcmp	ldy	#0
+	lda	(ACC),Y
+	bmi	dcmp1
+	eor	(SEC),Y
+	bmi	a.gt.s
+	bpl	dcmp2
+dcmp1	eor	(SEC),Y
+	bmi	a.lt.s
+	jsr	.swapd
+dcmp2	iny
+	lda	(ACC),Y
+	cmp	(SEC),Y
+	bmi	a.lt.s
+	bne	a.gt.s
+dcmp3	iny
+	lda	(ACC),Y
+	cmp	(SEC),Y
+	bcc	a.lt.s
+	bne	a.gt.s
+	cpy	#PREC+1
+	bne	dcmp3
+	lda	#0
+	rts
+*
+a.gt.s	lda	#1
+	rts
+*
+a.lt.s	lda	#-1
+	rts
+*
+.utod
+	ldy	#0
+	lda	R0
+	ora	R0+1
+	beq	dozero
+	tya
+	ldx	#2
+	bne	tod
+*
+.itod
+	ldy	#0
+	lda	R0
+	ora	R0+1
+	beq	dozero
+	ldx	#2
+	lda	R0+1
+	bpl	tod
+	sec
+	tya
+	sbc	R0
+	sta	R0
+	tya
+	sbc	R0+1
+	sta	R0+1
+	lda	#$80
+tod	sta	(ACC),Y
+	iny
+	txa
+	sta	(ACC),Y
+	iny
+tod1	lda	R0-1,X
+	sta	(ACC),Y
+	iny
+	dex
+	bne	tod1
+	lda	#0
+tod2	sta	(ACC),Y
+	iny
+	cpy	#PREC+2
+	bne	tod2
+	jmp	normal
+*
+dozero	ldy	#PREC+1
+	lda	#0
+dozero1	sta	(ACC),Y
+	dey
+	bpl	dozero1
+	ldy	#1
+	lda	#-64
+	sta	(ACC),Y
+	rts
+*
+.xtod
+	ldy	#0
+	ldx	#-4
+	tya
+xtod1	ora	R0+4,X
+	inx
+	bne	xtod1
+	tax
+	beq	dozero
+	ldx	#4
+	lda	R0+3
+	bpl	tod
+	sec
+	ldx	#-4
+xtod2	tya
+	sbc	R0+4,X
+	sta	R0+4,X
+	inx
+	bne	xtod2
+	ldx	#4
+	lda	#$80
+	bne	tod
+*
+.dtox	ldy	#0
+	ldx	#5
+	bne	dtoi1
+*
+.dtou	ldy	#1
+	bne	dtoi0
+*
+.dtoi	ldy	#0
+dtoi0	ldx	#3
+dtoi1	stx	SIZ
+	ldx	#0
+	sty	TMP0
+	ldy	#1
+	lda	(ACC),Y		;how big is it?
+	beq	dtoi2
+	bpl	dtoi3
+dtoi2	lda	#0		;<= 0 is too small to convert
+	beq	fin1
+dtoi3	cmp	SIZ		;too big?
+	bcc	dtoi6		;no
+	lda	TMP0		;yes, are we signed
+	beq	dtoi4		
+	lda	#-1		;unsigned, do biggest possible
+	sta	R0
+	sta	R0+1
+	rts
+dtoi4	dey
+	ldx	SIZ
+	lda	#$7F		;no, do biggest positive
+	sta	R0-2,X
+	lda	#$FF
+	bne	fin
+dtoi6	tax
+	pha
+	iny
+dtoi7	lda	(ACC),Y
+	sta	R0-1,X
+	iny
+	dex
+	bne	dtoi7
+	pla
+	tax
+	inx
+	lda	#0
+	beq	fin2
+*
+fin	dec	SIZ
+fin1	ldx	#1
+fin2	cpx	SIZ
+	bne	fin5
+	ldy	#0
+	lda	(ACC),Y
+	bpl	fin4
+	sec
+	ldx	#0
+	ldy	#4
+fin3	lda	#0
+	sbc	R0,X
+	sta	R0,X
+	inx
+	dey
+	bne	fin3
+fin4	ldx	#0
+	rts
+fin5	sta	R0-1,X
+	inx
+	bne	fin2
+*
+.tstd	lda	ACC
+	sta	VAL
+	lda	ACC+1
+	sta	VAL+1
+tstd1	ldy	#0
+	lda	(VAL),Y
+	bne	tstd2
+	iny
+	lda	(VAL),Y
+	cmp	#-64
+	bne	tstd2
+	iny
+	lda	(VAL),Y
+	bne	tstd2
+	lda	#0
+	sta	R0
+	sta	R0+1
+	rts
+tstd2	ldy	#0
+	sty	R0+1
+	iny
+	sty	R0
+	rts
+*
+ovrflow	lda	#2
+	jsr	usrrtn
+dobig	ldy	#1
+	lda	#63
+	sta	(ACC),Y
+	iny
+	lda	#$FF
+over1	sta	(ACC),Y
+	iny
+	cpy	#9
+	bne	over1
+	lda	#0
+	sta	(ACC),Y
+	rts
+*
+undflow	lda	#1
+	jsr	usrrtn
+	ldy	#PREC+1
+	lda	#0
+undflo1	sta	(ACC),Y
+	dey
+	bpl	undflo1
+	ldy	#1
+	lda	#-63
+	sta	(ACC),Y
+	tya
+	iny
+	sta	(ACC),Y
+	rts
+*
+div0	lda	#3
+	jsr	usrrtn
+	jmp	dobig
+*
+usrrtn	sta	flterr_
+	lda	Sysvec_
+	ora	Sysvec_+1
+	beq	mine
+	sec
+	lda	SP
+	sbc	#4
+	sta	SP
+	bcs	usrrtn1
+	dec	SP+1
+usrrtn1	ldy	#3
+	lda	PC+1
+	sta	(SP),Y
+	dey
+	lda	PC
+	sta	(SP),Y
+	dey
+	lda	#0
+	sta	(SP),Y
+	dey
+	lda	flterr_
+	sta	(SP),Y
+	lda	Sysvec_
+	sta	VAL
+	lda	Sysvec_+1
+	sta	VAL+1
+	jsr	dojmp
+	clc
+	lda	SP
+	adc	#4
+	sta	SP
+	bcc	usrrtn2
+	inc	SP+1
+usrrtn2	rts
+*
+dojmp	jmp	(VAL)
+*
+mine	sec
+	lda	SP
+	sbc	#56
+	sta	SP
+	bcs	mine1
+	dec	SP+1
+mine1	ldy	#6
+mine2	lda	msg1-6,Y
+	beq	mine3
+	sta	(SP),Y
+	iny
+	bne	mine2
+mine3	lda	flterr_
+	tax
+	dex
+	lda	mtab,X
+	tax
+mine4	lda	msg,X
+	beq	mine5
+	sta	(SP),Y
+	iny
+	inx
+	bne	mine4
+mine5	ldx	#0
+mine6	lda	msg2,X
+	beq	mine7
+	sta	(SP),Y
+	iny
+	inx
+	bne	mine6
+mine7	ldx	#0
+	lda	PC+1
+	jsr	dohex
+	lda	PC
+	jsr	dohex
+	lda	#10
+	sta	(SP),Y
+	tya
+	sec
+	sbc	#5
+	ldy	#4
+	sta	(SP),Y
+	iny
+	lda	#0
+	sta	(SP),Y
+	ldy	#1
+	sta	(SP),Y
+	dey
+	lda	#2
+	sta	(SP),Y
+	tay
+	clc
+	lda	SP
+	adc	#6
+	sta	(SP),Y
+	iny
+	lda	SP+1
+	adc	#0
+	sta	(SP),Y
+	jsr	write_#
+	clc
+	lda	SP
+	adc	#56
+	sta	SP
+	bcc	mine8
+	inc	SP+1
+mine8	ldx	#0
+	rts
+*
+dohex	sta	SIZ
+	lsr	A
+	lsr	A
+	lsr	A
+	lsr	A
+	jsr	phex
+	lda	SIZ
+	and	#$0F
+phex	tax
+	lda	chars,X
+	ldx	#0
+	sta	(SP),Y
+	iny
+	rts
+*
+chars	fcc	/0123456789ABCDEF/
+msg1	fcc	/Floating pt /
+	fcb	0
+msg2	fcc	/ at loc 0x/
+	fcb	0
+mtab	fcb	mund-msg,mover-msg,mdiv0-msg
+msg
+mund	fcc	/underflow/
+	fcb	0
+mover	fcc	/overflow/
+	fcb	0
+mdiv0	fcc	/divide by 0/
+	fcb	0
+*
+*
+*
+	cseg

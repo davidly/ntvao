@@ -1,0 +1,42 @@
+*:ts=8
+*
+* Copyright (c) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+
+	global	_dev_info_,2
+	global	_fil_tab_,2
+	global	errno_,2
+	global	_Sp_,2
+
+	public	_main_
+_main_
+	lda	#<$bc73
+	sta	_dev_info_
+	lda	#>$bc73
+	sta	_dev_info_+1
+	lda	#<$bc53
+	sta	_fil_tab_
+	lda	#>$bc53
+	sta	_fil_tab_+1
+	sta	_Sp_+1
+	jsr	main_
+	sec			;return from main: call exit(0)
+	lda	SP
+	sbc	#4
+	sta	SP
+	bcs	drop1
+	dec	SP+1
+drop1
+	lda	#0
+	ldy	#3
+loop1
+	sta	(SP),Y
+	dey
+	bne	loop1
+	jsr	exit_
+	brk
+;
+	public	main_
+	public	exit_
+

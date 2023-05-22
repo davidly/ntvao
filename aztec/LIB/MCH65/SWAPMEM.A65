@@ -1,0 +1,45 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	void
+*	swapmem(s1, s2, len);
+*	  char *s1, *s2;
+*	  int len;
+*
+*	swap blocks of memory
+*
+
+S1	equ	R0+2
+S2	equ	R0+4
+LEN	equ	R0+6
+
+	public	swapmem_
+swapmem_
+	ldy	#7		;copy params to zero page
+load	lda	(SP),Y
+	sta	R0,Y
+	dey
+	bpl	load
+
+	iny
+	ldx	LEN
+	beq	skip2
+loop	lda	(S1),Y
+	pha
+	lda	(S2),Y
+	sta	(S1),Y
+	pla
+	sta	(S2),Y
+	iny
+	bne	skip
+	inc	S1+1
+	inc	S2+1
+skip	dex
+	bne	loop
+skip2	dec	LEN+1
+	bpl	loop
+	rts
+

@@ -1,0 +1,26 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+SRC= asctime.c ctime.c gettime.c localtim.c time.c
+
+REL= asctime.r ctime.r gettime.r localtim.r time.r
+
+INT= asctime.i ctime.i gettime.i localtim.i time.i
+
+rel: $(REL)
+	echo done
+
+int: $(INT)
+	echo done

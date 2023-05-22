@@ -1,0 +1,16 @@
+# -----------------------------
+# makefile by bill buckels 2008
+# -----------------------------
+PRG=LCASE
+
+$(PRG): $(PRG).i
+    LN65 $(PRG).i -lci -lci
+    del $(PRG).i
+    MAKEPRG $(PRG)
+    del $(PRG)   
+    rename $(PRG).PRG $(PRG)
+    appibtxt $(PRG).c $(PRG).txt A
+    @echo $(PRG) now created!
+
+$(PRG).i: $(PRG).c
+           cci $(PRG).c

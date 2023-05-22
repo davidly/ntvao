@@ -1,0 +1,45 @@
+.SUFFIXES: .c .a65 .r .i
+
+.c.r:
+	cg65 +g0,8,80,10 -o $*.r $*.c
+	sqz65 $*.r
+
+.c.i:
+	cci -ao $*.asm $*.c
+	optint65 -ZAP $*.asm
+	sqz65 $*.i
+
+.a65.r:
+	as65 -o $*.r $*.a65
+	sqz65 $*.r
+
+SRC= access.c brk.c\
+	casecvt.c close.c crt0.a65 data.c exec.c execp.c exit.c exitu.c\
+	fixnam.a65 fixnamu.c\
+	getenv.c geteof.c getfinfo.a65 getfinfu.c  getiob.c getprfx.c\
+	isatty.c lseek.c\
+	mkdir.c open.c  perror.c read.c rename.c rsvstk.c\
+	samain.a65 sbrk.c seteof.a65 seteofu.c \
+	setfinfo.a65 setfinfu.c setiob.c setprfx.c\
+	shmain.a65 strshft.a65 system.a65\
+	unlink.c write.c 
+
+REL= exitu.r fixnamu.r getfinfu.r seteofu.r setfinfu.r access.r brk.r\
+	casecvt.r close.r crt0.r data.r exec.r execp.r exit.r fixnam.r\
+	getenv.r geteof.r getfinfo.r getiob.r getprfx.r isatty.r lseek.r\
+	mkdir.r open.r  read.r rename.r rsvstk.r samain.r sbrk.r seteof.r\
+	setfinfo.r setiob.r setprfx.r shmain.r strshft.r system.r\
+	unlink.r write.r perror.r cmdmain.r
+
+INT= exitu.i fixnamu.i getfinfu.i seteofu.i setfinfu.i access.i brk.i\
+	casecvt.i close.i crt0.r data.i exec.i execp.i exit.i fixnam.r\
+	getenv.i geteof.i getfinfo.r getiob.i getprfx.i isatty.i lseek.i\
+	mkdir.i open.i  read.i rename.i rsvstk.i samain.r sbrk.i seteof.r\
+	setfinfo.r setiob.i setprfx.i shmain.r strshft.r system.r\
+	unlink.i write.i perror.i cmdmain.r
+
+rel: $(REL)
+	echo done
+
+int: $(INT)
+	echo done

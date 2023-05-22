@@ -1,0 +1,137 @@
+;:ts=8
+;Copyright (C) 1984 by Manx Software Systems, Inc.
+;
+
+codeseg segment para public 'code'
+dataseg segment para public 'data'
+dataseg ends
+	assume cs:codeseg,ds:dataseg,es:dataseg,ss:dataseg
+	extrn $cswt:near
+	extrn $begin:near
+dataseg segment para public 'data'
+	public	Bauds_
+Bauds_ equ this word
+	dw 50,0
+	dw 75,1
+	dw 110,2
+	dw 150,4
+	dw 300,5
+	dw 600,6
+	dw 1200,7
+	dw 1800,8
+	dw 2000,9
+	dw 2400,10
+	dw 3600,11
+	dw 4800,12
+	dw 7200,13
+	dw 9600,14
+	dw 19200,15
+	dw 0,0
+dataseg ends
+;
+;	Interfacer 3/4 Routines.
+;
+
+I3_DATA		equ	10h		;data register
+I3_STATUS	equ	11h		;status register
+I3_MODE		equ	12h		;mode register
+I3_CMD		equ	13h		;command register
+I3_USER		equ	17h		;user select register
+
+AUX		equ	5
+
+	extrn	quit_:near
+	public cinit_
+cinit_ proc	near
+	mov bx,sp
+	push	si
+	mov	si, offset Bauds_
+$7:
+	cmp	 word ptr  [si],0
+	beq 	$6
+	mov	ax, word ptr  [si]
+	cmp	ax,word ptr 2[bx]
+	beq 	$6
+$5:
+	add	si,4
+	jmp $7
+$6:
+	mov	ax,word ptr 2[si]	;get baud value
+	pop si
+	mov	ah,al
+	mov	al,AUX			;init the console
+	out	I3_USER,al		;set the user number
+	mov	al,0ceh			;async, 16x, 8 bits, no parity, 2 stops
+	out	I3_MODE,al		;set up mode register 1
+	mov	al,ah			;baud rate
+	or	al,070h			;internal clocks (was 30)
+	out	I3_MODE,al		;set up mode register 2
+	mov	al,027h			;transmitter/recvr on, dtr low
+	out	I3_CMD,al		;set the command port
+	ret
+
+	public	cget_
+cget_:
+	mov	al,AUX			;console device
+	out	I3_USER,al
+cget0:
+	mov	cx,07fffh
+cget1:
+	in	al,I3_STATUS		;no, get the status
+	and	al,2			;check for receiver full
+	jnz	cget3			;yes, get char
+	loop	cget1			;try again
+	push	es
+	mov	ah,6			;console i/o call
+	mov	dx,0ffh
+	int	21h
+	pop	es
+	cmp	al,03
+	jnz	cget2
+	mov	ax,5
+	push	ax
+	call	quit_
+cget2:
+	mov	ax,-1			;return -1
+	ret
+cget3:
+	in	al,I3_DATA		;yes, get the byte
+	sub	ah,ah
+	ret
+
+	public	cput_
+cput_:
+	push	bx
+	mov	bx,sp
+	mov	ah,4[bx]
+	mov	al,AUX			;console device
+	out	I3_USER,al
+cput1:
+	in	al,I3_STATUS		;get the status
+	test	al,1			;is the transmitter ready?
+	jz	cput1			;not yet
+	mov	al,ah
+	out	I3_DATA,al		;output the data
+	pop	bx
+	ret
+
+	public	cflush_
+cflush_:
+	ret
+
+	public	clrchan_
+clrchan_:
+	mov	al,AUX			;console device
+	out	I3_USER,al
+	in	al,I3_STATUS		;get the status
+	and	al,2			;check for receiver full
+	jz	clrch0			;no, return
+	in	al,I3_DATA		;yes, get the byte
+clrch0:
+	sub	ah,ah
+	ret
+
+cinit_	endp
+CODESEG	ends
+	end
+

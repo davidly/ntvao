@@ -1,0 +1,50 @@
+*:ts=8
+*
+* Copyright (C) 1985 by Manx Software Systems, Inc.
+*
+	instxt	<zpage.h>
+*
+*	char *
+*	strrchr(str, c)
+*	  char *str;
+*	  int c;
+*
+*	returns a pointer to the last occurrence of c in str
+*
+
+STR	equ	R0+2
+C	equ	R0+4
+
+	public	strrchr_
+strrchr_
+	ldy	#4
+load	lda	(SP),Y		;copy params into registers
+	sta	R0,Y
+	dey
+	bne	load
+	sty	R0		;init return to 0
+	sty	R0+1
+loop	lda	(STR),Y		;get next char
+	cmp	C		;is it the one we want?
+	bne	next		;no, skip
+
+	pha
+	clc			;yes, set return to address
+	tya
+	adc	STR
+	sta	R0
+	lda	#0
+	adc	STR+1
+	sta	R0+1
+	pla
+
+next
+	cmp	#0
+	beq	end		;if zero, all done
+	iny			;bump to next char
+	bne	loop
+	inc	STR+1
+	bne	loop
+
+end	rts			;return, if found address already set
+
