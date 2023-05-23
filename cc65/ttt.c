@@ -15,7 +15,7 @@
         rem ntvao -p -c /s:1022727 ttt.hex
         ntvao -p -c ttt.hex
 
-   To run on the RetroLifeStyle Apple 1 Replica use ss (send serial): https://github.com/davidly/ss
+   To run on the RetroTechLife Apple 1 Replica use ss (send serial): https://github.com/davidly/ss
 
         ss /p:7 /s:ttt.hex /r:1000
 */
