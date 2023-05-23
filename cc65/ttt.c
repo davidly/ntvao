@@ -1,44 +1,54 @@
 /*
    Tic-Tac-Toe proof you can't win for the Apple 1.
-   This version builds with Aztec CG65 v3.2c 10-2-89 on MS-DOS targeting 6502.
-   That compiler expects an Apple II, so there are hacks here for the Apple 1.
-   There are dependencies on start.a, which initialzes for the Apple 1.
-   Aztec C treats the char type as unsigned, and expands to 16 bits for any expression (slow!)
+   This version is for CC65. https://cc65.github.io/
+   Uses Hex Dump app hd to generate an Apple 1 .hex file: https://github.com/davidly/hd
+   Build on Windows like this:
+
+        rem none defaults to a machine with RAM from 0 to $8000, perfect for the emulator and replica
+        cc65 -T -Oi -Or -t none ttt.c
+        ca65 ttt.s
+        ld65 -o ttt -t none ttt.o none.lib
+        hd -w:0x1000 ttt >ttt.hex
+
+   To run in the ntvao Apple 1 emulator: https://github.com/davidly/ntvao
+
+        rem ntvao -p -c /s:1022727 ttt.hex
+        ntvao -p -c ttt.hex
+
+   To run on the RetroLifeStyle Apple 1 Replica use ss (send serial): https://github.com/davidly/ss
+
+        ss /p:7 /s:ttt.hex /r:1000
 */
 
-#define LINT_ARGS
-
 #include <stdio.h>
+#include <stdint.h>
 
 #define true 1
 #define false 0
 
+#define USE_SPRINTF false    /* this makes the app 2x as big, making transfers to the Apple 1 slow */
 #define ABPrune true         /* alpha beta pruning */
 #define WinLosePrune true    /* stop early on win/lose */
-#define WinFunPointers true  /* use function pointers for each move position. slightly faster on Apple 1 */
+#define WinFunPointers false /* use function pointers for each move position. cc65 is the only C compiler that's faster using false, by 10%! */
 #define ScoreWin 6
 #define ScoreTie 5
 #define ScoreLose  4
 #define ScoreMax 9
 #define ScoreMin 2
-#define DefaultIterations 1
+#define DefaultIterations 100
 
 #define PieceX 1
 #define PieceO 2
 #define PieceBlank 0
 
-int g_Iterations = DefaultIterations;
-int g_Moves = 0;
-
-typedef unsigned char uchar;
-
-uchar g_board[ 9 ];
+uint16_t g_Moves = 0;
+uint8_t g_board[ 9 ];
 
 #if WinFunPointers
 
-uchar pos0func()
+uint8_t pos0func()
 {
-    register uchar x = g_board[0];
+    register uint8_t x = g_board[0];
     
     if ( ( x == g_board[1] && x == g_board[2] ) ||
          ( x == g_board[3] && x == g_board[6] ) ||
@@ -47,9 +57,9 @@ uchar pos0func()
     return PieceBlank;
 }
 
-uchar pos1func()
+uint8_t pos1func()
 {
-    register uchar x = g_board[1];
+    register uint8_t x = g_board[1];
     
     if ( ( x == g_board[0] && x == g_board[2] ) ||
          ( x == g_board[4] && x == g_board[7] ) )
@@ -57,9 +67,9 @@ uchar pos1func()
     return PieceBlank;
 } 
 
-uchar pos2func()
+uint8_t pos2func()
 {
-    register uchar x = g_board[2];
+    register uint8_t x = g_board[2];
     
     if ( ( x == g_board[0] && x == g_board[1] ) ||
          ( x == g_board[5] && x == g_board[8] ) ||
@@ -68,9 +78,9 @@ uchar pos2func()
     return PieceBlank;
 } 
 
-uchar pos3func()
+uint8_t pos3func()
 {
-    register uchar x = g_board[3];
+    register uint8_t x = g_board[3];
     
     if ( ( x == g_board[4] && x == g_board[5] ) ||
          ( x == g_board[0] && x == g_board[6] ) )
@@ -78,9 +88,9 @@ uchar pos3func()
     return PieceBlank;
 } 
 
-uchar pos4func()
+uint8_t pos4func()
 {
-    register uchar x = g_board[4];
+    register uint8_t x = g_board[4];
     
     if ( ( x == g_board[0] && x == g_board[8] ) ||
          ( x == g_board[2] && x == g_board[6] ) ||
@@ -90,9 +100,9 @@ uchar pos4func()
     return PieceBlank;
 } 
 
-uchar pos5func()
+uint8_t pos5func()
 {
-    register uchar x = g_board[5];
+    register uint8_t x = g_board[5];
     
     if ( ( x == g_board[3] && x == g_board[4] ) ||
          ( x == g_board[2] && x == g_board[8] ) )
@@ -100,9 +110,9 @@ uchar pos5func()
     return PieceBlank;
 } 
 
-uchar pos6func()
+uint8_t pos6func()
 {
-    register uchar x = g_board[6];
+    register uint8_t x = g_board[6];
     
     if ( ( x == g_board[7] && x == g_board[8] ) ||
          ( x == g_board[0] && x == g_board[3] ) ||
@@ -111,9 +121,9 @@ uchar pos6func()
     return PieceBlank;
 } 
 
-uchar pos7func()
+uint8_t pos7func()
 {
-    register uchar x = g_board[7];
+    register uint8_t x = g_board[7];
     
     if ( ( x == g_board[6] && x == g_board[8] ) ||
          ( x == g_board[1] && x == g_board[4] ) )
@@ -121,9 +131,9 @@ uchar pos7func()
     return PieceBlank;
 } 
 
-uchar pos8func()
+uint8_t pos8func()
 {
-    register uchar x = g_board[8];
+    register uint8_t x = g_board[8];
     
     if ( ( x == g_board[6] && x == g_board[7] ) ||
          ( x == g_board[2] && x == g_board[5] ) ||
@@ -132,7 +142,7 @@ uchar pos8func()
     return PieceBlank;
 } 
 
-typedef uchar pfunc_t();
+typedef uint8_t pfunc_t();
 
 pfunc_t * winner_functions[9] =
 {
@@ -149,9 +159,9 @@ pfunc_t * winner_functions[9] =
 
 #else /* WinFunPointers */
 
-uchar LookForWinner()
+uint8_t LookForWinner()
 {
-    uchar p = g_board[0];
+    register uint8_t p = g_board[0];
     if ( PieceBlank != p )
     {
         if ( p == g_board[1] && p == g_board[2] )
@@ -192,9 +202,13 @@ uchar LookForWinner()
 
 #endif /* WinFunPointers */
 
-int MinMax( alpha, beta, depth, move ) uchar alpha; uchar beta; uchar depth; uchar move;
+#if WinFunPointers
+int MinMax( alpha, beta, depth, move ) uint8_t alpha; uint8_t beta; uint8_t depth; uint8_t move;
+#else
+int MinMax( alpha, beta, depth ) uint8_t alpha; uint8_t beta; uint8_t depth;
+#endif
 {
-    uchar value, pieceMove, score, p;
+    uint8_t value, pieceMove, score, p;
 #if WinFunPointers
     pfunc_t * pf;
 #endif
@@ -235,12 +249,16 @@ int MinMax( alpha, beta, depth, move ) uchar alpha; uchar beta; uchar depth; uch
         pieceMove = PieceO;
     }
 
-    for ( p = 0; p < 9; p++ )
+    for ( p = 0; p < 9; ++p )
     {
         if ( PieceBlank == g_board[ p ] )
         {
             g_board[p] = pieceMove;
+#if WinFunPointers
             score = MinMax( alpha, beta, depth + 1, p );
+#else
+            score = MinMax( alpha, beta, depth + 1 );
+#endif
             g_board[p] = PieceBlank;
 
             if ( depth & 1 ) 
@@ -285,33 +303,37 @@ int MinMax( alpha, beta, depth, move ) uchar alpha; uchar beta; uchar depth; uch
     return value;
 }  /*MinMax*/
 
-int FindSolution( position ) uchar position;
+int FindSolution( position ) uint8_t position;
 {
     g_board[ position ] = PieceX;
+#if WinFunPointers
     MinMax( ScoreMin, ScoreMax, 0, position );
+#else
+    MinMax( ScoreMin, ScoreMax, 0 );
+#endif
     g_board[ position ] = PieceBlank;
 
     return 0;
 } /*FindSolution*/
 
-void show_int( val ) int val;
+void show_int( val ) uint16_t val;
 {
-    int * pi = (int *) 0xc0;  
-    *pi = val;
+    static uint8_t h, l;
+    h = val >> 8;
+    l = val;
 
-    __asm__( "lda     $c1" );
+    __asm__( "lda     %v", h );
     __asm__( "jsr     $ffdc" );
-    __asm__( "lda     $c0" );
+    __asm__( "lda     %v", l );
     __asm__( "jsr     $ffdc" );
 } /*show_int*/
 
 void show_char( val ) char val;
 {
-    char * pc = (char *) 0xc0;
-    *pc = val;
-
-    __asm__( "lda  $c0" );
-    __asm__( "jsr   $ffef" );
+    static uint8_t s_val;
+    s_val = val;
+    __asm__( "lda     %v", s_val );
+    __asm__( "jsr     $ffef" );
 } /*show_char*/
 
 void show_string( str ) char * str;
@@ -325,19 +347,20 @@ void show_string( str ) char * str;
 
 void bye()
 {
-    __asm__( "jsr $ff1f" );
+    __asm__( "jsr     $ff1f" );
 } /*bye*/
-
-//static char ac[40];
 
 int main()
 {
-    uchar i;
+#if USE_SPRINTF
+    static char ac[40];
+#endif
+    uint8_t i;
 
-    for ( i = 0; i < 9; i++ )
+    for ( i = 0; i < 9; ++i )
         g_board[ i ] = PieceBlank;
 
-    for ( i = 0; i < g_Iterations; i++ )
+    for ( i = 0; i < DefaultIterations; i++ )
     {
         g_Moves = 0;
         FindSolution( 0 );
@@ -345,15 +368,16 @@ int main()
         FindSolution( 4 );
     }
 
+#if USE_SPRINTF
+    sprintf( ac, "moves: %d\r\n", g_Moves );
+    show_string( ac );
+    sprintf( ac, "iterations: %d\r\n", DefaultIterations );
+    show_string( ac );
+#else
     show_int( g_Moves );
+#endif
 
-// this works, but is slow enough to impact total runtime
-//    sprintf( ac, "moves: %d\r\n", g_Moves );
-//    show_string( ac );
-//    sprintf( ac, "iterations: %d\r\n", g_Iterations );
-//    show_string( ac );
-
-    show_char( '$' );
+    show_char( '$' ); // signal to elapsed time measurement app that execution is complete
 
     /* The C runtime doesn't know how to exit or even return to the entry proc
        on an Apple 1, so exit with bye() */
