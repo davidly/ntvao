@@ -43,6 +43,7 @@ static uint16_t g_startAddress = 0xff00; // The monitor entrypoint
 static bool g_fStartAddressSpecified = false;
 static bool g_useHooks = false;
 static bool g_use40x24 = true;
+static ConsoleConfiguration * g_pConsoleConfiguration = 0;
 
 static void usage( char const * perr = 0 )
 {
@@ -168,6 +169,17 @@ uint8_t mos6502_invoke_hook( void )
 
     return memory[ address ];
 } //mos6502_invoke_hook
+
+void mos6502_hard_exit( const char * perror, uint8_t val )
+{
+    if ( g_pConsoleConfiguration )
+        g_pConsoleConfiguration->RestoreConsole();
+
+    printf( perror, val );
+    tracer.Trace( perror, val );
+
+    exit( 1 );
+} //mos6502_hard_exit
 
 static vector<char> g_inputText;
 static uint32_t g_inputOffset = 0;
@@ -637,6 +649,10 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         if ( !ok )
         {
             printf( "unable to load command %s\n", pcFile );
+
+            if ( g_pConsoleConfiguration )
+                g_pConsoleConfiguration->RestoreConsole();
+
             exit( 1 );
         }
     }
@@ -857,6 +873,7 @@ int main( int argc, char * argv[] )
     fill_random( memory, sizeof( memory ) ); // real hardware has random values
 
     ConsoleConfiguration consoleConfig;
+    g_pConsoleConfiguration = &consoleConfig;
     if ( g_use40x24 )
         consoleConfig.EstablishConsole( 40, 24, (void *) ControlHandler );
 

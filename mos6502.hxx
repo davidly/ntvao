@@ -69,4 +69,4 @@ extern void mos6502_invoke_halt( void );                 // called when the OPCO
 extern uint8_t mos6502_invoke_hook( void );              // called when the OPCODE_HOOK instruction is executed
 extern uint8_t mos6502_apple1_load( uint16_t address );  // when 0xd010-0xd013 are used with a load instruction
 extern void mos6502_apple1_store( uint16_t address );    // when 0xd010-0xd013 are used with a store instruction
-
+extern void mos6502_hard_exit( const char * perror, uint8_t val ); // called when the emulator executes invalid instructions

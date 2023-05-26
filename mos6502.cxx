@@ -455,11 +455,7 @@ _restart_op:
                     val = memory[ address ];
                 }
                 else
-                {
-                    printf( "mos6502 unsupported comparison instruction %02x\n", op );
-                    tracer.Trace( "mos6502 unsupported comparison instruction %02x\n", op );
-                    exit( 1 );
-                }
+                    mos6502_hard_exit( "mos6502 unsupported comparison instruction %02x\n", op );
     
                 op_math( math, val );
             }
@@ -502,11 +498,7 @@ _restart_op:
                         address += (uint16_t) x;               // a16,x   crossing page boundry is free
                 }
                 else
-                {
-                    printf( "mos6502 unsupported rotate instruction %02x\n", op );
-                    tracer.Trace( "mos6502 unsupported rotate instruction %02x\n", op );
-                    exit( 1 );
-                }
+                    mos6502_hard_exit("mos6502 unsupported rotate instruction %02x\n", op );
     
                 uint8_t rotate = ( ( hi >> 4 ) & 0xf ) / 2;
                 memory[ address ] = op_rotate( rotate, memory[ address ] );
@@ -537,11 +529,7 @@ _restart_op:
                 else if ( 0x9d == op )                         // a16,x
                     address = mword( pc + 1 ) + x;             
                 else
-                {
-                    printf( "mos6502 unsupported store instruction %02x\n", op );
-                    tracer.Trace( "mos6502 unsupported store instruction %02x\n", op );
-                    exit( 1 );
-                }
+                    mos6502_hard_exit( "mos6502 unsupported store instruction %02x\n", op );
 
                 memory[ address ] = tostore;
 
@@ -576,11 +564,7 @@ _restart_op:
                 else if ( 0xb9 == op || 0xbe == op )               // a16,y
                     address = mword( pc + 1 ) + y;             
                 else
-                {
-                    printf( "mos6502 unsupported load truction opcode %02x\n", op );
-                    tracer.Trace( "mos6502 unsupported load instruction opcode %02x\n", op );
-                    exit( 1 );
-                }
+                    mos6502_hard_exit( "mos6502 unsupported load instruction opcode %02x\n", op );
 
                 // minimal Apple 1 emulation support
                 if ( address >= 0xd010 && address <= 0xd012 )
@@ -597,11 +581,7 @@ _restart_op:
                     y = val;
             }
             else
-            {
-                printf( "mos6502 unimplemented instruction opcode %02x\n", op );
-                tracer.Trace( "mos6502 unimplemented instruction opcode %02x\n", op );
-                exit( 1 );
-            }
+                mos6502_hard_exit( "mos6502 unimplemented instruction opcode %02x\n", op );
         }
 
         pc = nextpc;
