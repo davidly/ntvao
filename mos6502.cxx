@@ -63,7 +63,7 @@ static const Instruction ins_6502[ 256 ] =
     /*a0*/ 2,2,"ldy #d8", 2,6,"lda (a8,x)", 2,2,"ldx #d8", 0,0,"", 2,3,"ldy a8",    2,3,"lda a8",    2,3,"ldx a8",    0,0,"", 
     /*a8*/ 1,2,"tay",     2,2,"lda #d8",    1,2,"tax",     0,0,"", 3,4,"ldy a16",   3,4,"lda a16",   3,4,"ldx a16",   0,0,"", 
     /*b0*/ 2,3,"bcs r8",  2,5,"lda (a8),y", 0,0,"",        0,0,"", 2,4,"ldy a8,x",  2,4,"lda a8,x",  2,4,"ldx a8,y",  0,0,"", 
-    /*b8*/ 1,2,"clv",     3,4,"lda a16,y",  1,2,"tsx",     0,0,"", 3,4,"ldy a16,x", 3,4,"lsa a16,x", 3,4,"ldx a16,y", 0,0,"", 
+    /*b8*/ 1,2,"clv",     3,4,"lda a16,y",  1,2,"tsx",     0,0,"", 3,4,"ldy a16,x", 3,4,"lda a16,x", 3,4,"ldx a16,y", 0,0,"", 
     /*c0*/ 2,2,"cpy #d8", 2,6,"cmp (a8,x)", 0,0,"",        0,0,"", 2,3,"cpy a8",    2,3,"cmp a8",    2,5,"dec a8",    0,0,"", 
     /*c8*/ 1,2,"iny",     2,2,"cmp #d8",    1,2,"dex",     0,0,"", 3,4,"cpy a16",   3,4,"cmp a16",   3,6,"dec a16",   0,0,"", 
     /*d0*/ 2,3,"bne r8",  2,5,"cmp (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"cmp a8,x",  2,6,"dec a8,x",  0,0,"", 
@@ -114,7 +114,7 @@ void MOS_6502::trace_state()
 {
     if ( tracer.IsEnabled() ) // avoid the formatting if not actually tracing
     {
-        //tracer.TraceBinaryData( & memory[ 0 ], 16, 2 );
+        //tracer.TraceBinaryData( & memory[ 0x3f ], 16, 2 );
         //tracer.TraceBinaryData( & memory[ 0x01f0 ], 16, 2 );
         tracer.Trace( "pc %04x, op %02x, op2 %02x, op3 %02x, a %02x, x %02x, y %02x, sp %02x, %s, %s\n",
                       pc, memory[ pc ], memory[ pc + 1 ], memory[ pc + 2 ],
