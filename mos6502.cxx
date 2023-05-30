@@ -10,7 +10,8 @@
 // Tested with a handful of small apps and apps compiled with the BA BASIC compiler in my TTT repo.
 // 100% success (with ROM_vectors=0) with 6502_functional_test.a65 from https://github.com/Klaus2m5/6502_65C02_functional_tests
 // Success with that test means an infinite loop at address 0x347d (if you don't modify the sources).
-// Tested with the Wozniak Apple 1 Monitor and BASIC interpreter
+// Tested with the Wozniak Apple 1 Monitor and BASIC interpreter.
+// Tested with C apps compiled with Aztec and CC65 compilers.
 
 #include <assert.h>
 #include <djltrace.hxx>
@@ -309,7 +310,6 @@ _restart_op:
         uint16_t nextpc = pc + ins_6502[ op ].length; // default, but will change for jump/branch/return
         cycles += ins_6502[ op ].cycles;
 
-        bool handled = true;
         switch( op )  // switch on fixed opcodes to use a jump table
         {
             case 0x00: { fBreak = true; fInterrupt = true; break; } // brk
@@ -376,216 +376,214 @@ _restart_op:
             case 0xec: { op_cmp( x, memory[ mword( pc + 1 ) ] ); break; } // cpx a16
             case 0xf8: { fDecimal = true; break; } // sed
             case 0xff: { mos6502_invoke_halt(); goto _all_done; } // halt
-            default: { handled = false; break; }
-        }
-
-        if ( !handled )  // each of these cases handles multiple instructions
-        {
-            uint8_t hi = ( op & 0xf0 );
-            uint8_t lo = ( op & 0x0f );
-    
-            if ( 0x10 == ( op & 0x1f ) ) // conditional branches
+            default: 
             {
-                bool branch;
-                if ( hi <= 0x30 )
-                    branch = fNegative;
-                else if ( hi <= 0x80 )
-                    branch = fOverflow;
-                else if ( hi <= 0xb0 )
-                    branch = fCarry;
-                else
-                    branch = fZero;
-    
-                if ( 0 == ( hi & 0x20 ) )
-                    branch = !branch;
-    
-                if ( branch )
+                uint8_t hi = ( op & 0xf0 );
+                uint8_t lo = ( op & 0x0f );
+        
+                if ( 0x10 == ( op & 0x1f ) ) // conditional branches
                 {
-                    cycles++;
-                    uint16_t oldpc = pc;
-                    nextpc = pc + 2 + (int16_t) (int8_t) memory[ pc + 1 ];
-                    if ( ( oldpc & 0xff00 ) != ( pc & 0xff00 ) )
-                        cycles++;
-                }
-            }
-            else if ( ( hi < 0x80 || hi >= 0xc0 ) && ( lo & 0x01 ) ) // math of various address modes
-            {
-                uint8_t math = ( hi >> 4 ) / 2;
-                uint8_t val;
-                if ( 0x01 == lo )
-                {
-                    if ( hi & 0x10 )                                    // (a8),y
+                    bool branch;
+                    if ( hi <= 0x30 )
+                        branch = fNegative;
+                    else if ( hi <= 0x80 )
+                        branch = fOverflow;
+                    else if ( hi <= 0xb0 )
+                        branch = fCarry;
+                    else
+                        branch = fZero;
+        
+                    if ( 0 == ( hi & 0x20 ) )
+                        branch = !branch;
+        
+                    if ( branch )
                     {
-                        uint16_t address = mword( memory[ pc + 1 ] );
+                        cycles++;
+                        uint16_t oldpc = pc;
+                        nextpc = pc + 2 + (int16_t) (int8_t) memory[ pc + 1 ];
+                        if ( ( oldpc & 0xff00 ) != ( pc & 0xff00 ) )
+                            cycles++;
+                    }
+                }
+                else if ( ( hi < 0x80 || hi >= 0xc0 ) && ( lo & 0x01 ) ) // math of various address modes
+                {
+                    uint8_t math = ( hi >> 4 ) / 2;
+                    uint8_t val;
+                    if ( 0x01 == lo )
+                    {
+                        if ( hi & 0x10 )                                    // (a8),y
+                        {
+                            uint16_t address = mword( memory[ pc + 1 ] );
+                            if ( crosses_page( address, y ) )
+                                cycles++;
+                            val = memory[ (uint16_t) y + address ];
+                        }
+                        else                                                // (a8,x)
+                            val = memory[ mword( 0xff & ( memory[ pc + 1 ] + x ) ) ];  // wrap
+                    }
+                    else if ( 0x05 == lo )
+                    {
+                        uint16_t address = memory[ pc + 1 ];                // a8
+                        if ( hi & 0x10 )                                    // a8,x
+                            address = 0xff & ( address + x );               // wrap
+                        val = memory[ address ];
+                    }
+                    else if ( 0x09 == lo )
+                    {
+                        if ( hi & 0x10 )                                    // a16,y
+                        {
+                            uint16_t address = mword( pc + 1 );
+                            if ( crosses_page( address, y ) )
+                                cycles++;
+                            val = memory[ address + y ];
+                        }
+                        else                                                // #d8
+                            val = memory[ pc + 1 ];                         
+                    }
+                    else if ( 0x0d == lo )
+                    {
+                        uint16_t address = mword( pc + 1 );                 // a16
+                        if ( hi & 0x10 )                                    // a16,x
+                        {
+                            if ( crosses_page( address, x ) )
+                                cycles++;
+                            address += (uint16_t) x;
+                        }
+                        val = memory[ address ];
+                    }
+                    else
+                        mos6502_hard_exit( "mos6502 unsupported comparison instruction %02x\n", op );
+        
+                    op_math( math, val );
+                }
+                else if ( hi >=  0xc0 && ( 0x06 == lo || 0x0e == lo ) ) // dec and inc memory
+                {
+                    uint16_t address;
+                    if ( 0x06 == lo )
+                        address = memory[ pc + 1 ];
+                    else
+                        address = mword( pc + 1 );
+        
+                    if ( hi & 0x10 )
+                        address += x;
+        
+                    if ( hi >= 0xe0 )
+                        memory[ address ]++;
+                    else
+                        memory[ address ]--;
+        
+                    set_nz( memory[ address ] );
+                }
+                else if ( op <= 0x6a && ( 0x0a == lo ) ) // rotate a
+                {
+                    uint8_t rotate = ( ( hi >> 4 ) & 0xf ) / 2;
+                    a = op_rotate( rotate, a );
+                }
+                else if ( op < 0x80 && ( 0x06 == lo || 0x0e == lo ) ) // rotate memory at address
+                {
+                    uint16_t address;
+                    if ( 0x06 == lo )
+                    {
+                        address = memory[ pc + 1 ];                // a8
+                        if ( hi & 0x10 )
+                            address += (uint16_t) x;               // a8,x
+                    }
+                    else if ( 0x0e == lo )
+                    {
+                        address = mword( pc + 1 );                 // a16
+                        if ( hi & 0x10 )
+                            address += (uint16_t) x;               // a16,x   crossing page boundry is free
+                    }
+                    else
+                        mos6502_hard_exit("mos6502 unsupported rotate instruction %02x\n", op );
+        
+                    uint8_t rotate = ( ( hi >> 4 ) & 0xf ) / 2;
+                    memory[ address ] = op_rotate( rotate, memory[ address ] );
+                }
+                else if ( op >= 0x81 && op <= 0x9d ) // sta, stx, sty. others in range handled above
+                {
+                    uint8_t tostore = ( lo & 1 ) ? a : ( lo & 2 ) ? x : y;
+                    uint16_t address;
+                    if ( 0x81 == op )                              // (a8,x)
+                        address = mword( 0xff & ( memory[ pc + 1 ] + x ) );   // wrap
+                    else if ( 0x91 == op )                         // (a8),y
+                    {
+                        address = mword( memory[ pc + 1 ] );
                         if ( crosses_page( address, y ) )
                             cycles++;
-                        val = memory[ (uint16_t) y + address ];
+                        address += y;
                     }
-                    else                                                // (a8,x)
-                        val = memory[ mword( 0xff & ( memory[ pc + 1 ] + x ) ) ];  // wrap
+                    else if ( op >= 0x84 && op <= 0x86 )           // a8
+                        address = memory[ pc + 1 ];                
+                    else if ( op == 0x94 || op == 0x95 )           // a8,x
+                        address = 0xff & ( memory[ pc + 1 ] + x ); // wrap           
+                    else if ( 0x96 == op )                         // a8,y
+                        address = 0xff & ( memory[ pc + 1 ] + y ); // wrap
+                    else if ( 0x99 == op )                         // a16,y 
+                        address = mword( pc + 1 ) + y;             
+                    else if ( op >= 0x8c && op <= 0x8e )           // a16
+                        address = mword( pc + 1 );                 
+                    else if ( 0x9d == op )                         // a16,x
+                        address = mword( pc + 1 ) + x;             
+                    else
+                        mos6502_hard_exit( "mos6502 unsupported store instruction %02x\n", op );
+    
+                    memory[ address ] = tostore;
+    
+                    // minimal Apple 1 emulation support
+                    if ( 0xd012 == address )
+                        mos6502_apple1_store( address );
                 }
-                else if ( 0x05 == lo )
+                else if ( op >= 0xa0 && op <= 0xbe ) // lda, ldx, ldy. others in range handled above
                 {
-                    uint16_t address = memory[ pc + 1 ];                // a8
-                    if ( hi & 0x10 )                                    // a8,x
-                        address = 0xff & ( address + x );               // wrap
-                    val = memory[ address ];
-                }
-                else if ( 0x09 == lo )
-                {
-                    if ( hi & 0x10 )                                    // a16,y
+                    uint16_t address;
+                    if ( ( 0xa0 == hi ) && ( 0 == lo || 2 == lo || 9 == lo ) ) // #d8
+                        address = pc + 1;                          
+                    else if ( op == 0xa1 )                                     // (a8,x)
+                        address = mword( 0xff & ( memory[ pc + 1 ] + x ) );    // wrap
+                    else if ( op == 0xb1 )                                     // (a8),y
                     {
-                        uint16_t address = mword( pc + 1 );
+                        address = mword( memory[ pc + 1 ] );
                         if ( crosses_page( address, y ) )
                             cycles++;
-                        val = memory[ address + y ];
+                        address += y;
                     }
-                    else                                                // #d8
-                        val = memory[ pc + 1 ];                         
-                }
-                else if ( 0x0d == lo )
-                {
-                    uint16_t address = mword( pc + 1 );                 // a16
-                    if ( hi & 0x10 )                                    // a16,x
-                    {
-                        if ( crosses_page( address, x ) )
-                            cycles++;
-                        address += (uint16_t) x;
-                    }
-                    val = memory[ address ];
-                }
-                else
-                    mos6502_hard_exit( "mos6502 unsupported comparison instruction %02x\n", op );
+                    else if ( op >= 0xa4 && op <= 0xa6 )               // a8
+                        address = memory[ pc + 1 ];                
+                    else if ( op >= 0xb4 && op <= 0xb5 )               // a8,x
+                        address = 0xff & ( memory[ pc + 1 ] + x );     // wrap
+                    else if ( 0xb6 == op )                             // a8,y
+                        address = 0xff & ( memory[ pc + 1 ] + y );     // wrap
+                    else if ( op >= 0xac && op <= 0xae )               // a16
+                        address = mword( pc + 1 );                 
+                    else if ( 0xbc == op || 0xbd == op )               // a16,x
+                        address = mword( pc + 1 ) + x;             
+                    else if ( 0xb9 == op || 0xbe == op )               // a16,y
+                        address = mword( pc + 1 ) + y;             
+                    else
+                        mos6502_hard_exit( "mos6502 unsupported load instruction opcode %02x\n", op );
     
-                op_math( math, val );
-            }
-            else if ( hi >=  0xc0 && ( 0x06 == lo || 0x0e == lo ) ) // dec and inc memory
-            {
-                uint16_t address;
-                if ( 0x06 == lo )
-                    address = memory[ pc + 1 ];
-                else
-                    address = mword( pc + 1 );
+                    // minimal Apple 1 emulation support
+                    if ( address >= 0xd010 && address <= 0xd012 )
+                        memory[ address ] = mos6502_apple1_load( address );
     
-                if ( hi & 0x10 )
-                    address += x;
-    
-                if ( hi >= 0xe0 )
-                    memory[ address ]++;
-                else
-                    memory[ address ]--;
-    
-                set_nz( memory[ address ] );
-            }
-            else if ( op <= 0x6a && ( 0x0a == lo ) ) // rotate a
-            {
-                uint8_t rotate = ( ( hi >> 4 ) & 0xf ) / 2;
-                a = op_rotate( rotate, a );
-            }
-            else if ( op < 0x80 && ( 0x06 == lo || 0x0e == lo ) ) // rotate memory at address
-            {
-                uint16_t address;
-                if ( 0x06 == lo )
-                {
-                    address = memory[ pc + 1 ];                // a8
-                    if ( hi & 0x10 )
-                        address += (uint16_t) x;               // a8,x
-                }
-                else if ( 0x0e == lo )
-                {
-                    address = mword( pc + 1 );                 // a16
-                    if ( hi & 0x10 )
-                        address += (uint16_t) x;               // a16,x   crossing page boundry is free
+                    uint8_t val = memory[ address ];
+                    set_nz( val );
+        
+                    if ( op & 1 )
+                        a = val;
+                    else if ( op & 2 )
+                        x = val;
+                    else
+                        y = val;
                 }
                 else
-                    mos6502_hard_exit("mos6502 unsupported rotate instruction %02x\n", op );
-    
-                uint8_t rotate = ( ( hi >> 4 ) & 0xf ) / 2;
-                memory[ address ] = op_rotate( rotate, memory[ address ] );
-            }
-            else if ( op >= 0x81 && op <= 0x9d ) // sta, stx, sty. others in range handled above
-            {
-                uint8_t tostore = ( lo & 1 ) ? a : ( lo & 2 ) ? x : y;
-                uint16_t address;
-                if ( 0x81 == op )                              // (a8,x)
-                    address = mword( 0xff & ( memory[ pc + 1 ] + x ) );   // wrap
-                else if ( 0x91 == op )                         // (a8),y
-                {
-                    address = mword( memory[ pc + 1 ] );
-                    if ( crosses_page( address, y ) )
-                        cycles++;
-                    address += y;
-                }
-                else if ( op >= 0x84 && op <= 0x86 )           // a8
-                    address = memory[ pc + 1 ];                
-                else if ( op == 0x94 || op == 0x95 )           // a8,x
-                    address = 0xff & ( memory[ pc + 1 ] + x ); // wrap           
-                else if ( 0x96 == op )                         // a8,y
-                    address = 0xff & ( memory[ pc + 1 ] + y ); // wrap
-                else if ( 0x99 == op )                         // a16,y 
-                    address = mword( pc + 1 ) + y;             
-                else if ( op >= 0x8c && op <= 0x8e )           // a16
-                    address = mword( pc + 1 );                 
-                else if ( 0x9d == op )                         // a16,x
-                    address = mword( pc + 1 ) + x;             
-                else
-                    mos6502_hard_exit( "mos6502 unsupported store instruction %02x\n", op );
-
-                memory[ address ] = tostore;
-
-                // minimal Apple 1 emulation support
-                if ( 0xd012 == address )
-                    mos6502_apple1_store( address );
-            }
-            else if ( op >= 0xa0 && op <= 0xbe ) // lda, ldx, ldy. others in range handled above
-            {
-                uint16_t address;
-                if ( ( 0xa0 == hi ) && ( 0 == lo || 2 == lo || 9 == lo ) ) // #d8
-                    address = pc + 1;                          
-                else if ( op == 0xa1 )                                     // (a8,x)
-                    address = mword( 0xff & ( memory[ pc + 1 ] + x ) );    // wrap
-                else if ( op == 0xb1 )                                     // (a8),y
-                {
-                    address = mword( memory[ pc + 1 ] );
-                    if ( crosses_page( address, y ) )
-                        cycles++;
-                    address += y;
-                }
-                else if ( op >= 0xa4 && op <= 0xa6 )               // a8
-                    address = memory[ pc + 1 ];                
-                else if ( op >= 0xb4 && op <= 0xb5 )               // a8,x
-                    address = 0xff & ( memory[ pc + 1 ] + x );     // wrap
-                else if ( 0xb6 == op )                             // a8,y
-                    address = 0xff & ( memory[ pc + 1 ] + y );     // wrap
-                else if ( op >= 0xac && op <= 0xae )               // a16
-                    address = mword( pc + 1 );                 
-                else if ( 0xbc == op || 0xbd == op )               // a16,x
-                    address = mword( pc + 1 ) + x;             
-                else if ( 0xb9 == op || 0xbe == op )               // a16,y
-                    address = mword( pc + 1 ) + y;             
-                else
-                    mos6502_hard_exit( "mos6502 unsupported load instruction opcode %02x\n", op );
-
-                // minimal Apple 1 emulation support
-                if ( address >= 0xd010 && address <= 0xd012 )
-                    memory[ address ] = mos6502_apple1_load( address );
-
-                uint8_t val = memory[ address ];
-                set_nz( val );
-    
-                if ( op & 1 )
-                    a = val;
-                else if ( op & 2 )
-                    x = val;
-                else
-                    y = val;
-            }
-            else
-                mos6502_hard_exit( "mos6502 unimplemented instruction opcode %02x\n", op );
-        }
+                    mos6502_hard_exit( "mos6502 unimplemented instruction opcode %02x\n", op );
+            } //default
+        } //switch
 
         pc = nextpc;
-    }
+    } //while
 
 _all_done:
     return cycles;
