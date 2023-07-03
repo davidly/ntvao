@@ -2,7 +2,7 @@
 30 dim b0(9), s1(10), s2(10), s4(10), s8(10), s6(10)
 38 m1 = 0
 39 gosub 1000
-40 for l = 1 to 1
+40 for l = 1 to 10
 41 m1 = 0 : a1 = 2 : b1 = 9 : b0(1) = 1
 45 gosub 4000
 58 a1 = 2 : b1 = 9 : b0(1) = 0 : b0(2) = 1
@@ -12,7 +12,8 @@
 73 b0(5) = 0
 80 next l
 87 print "final move count (6493 expected): "; m1
-88 print "$"
+88 print "iterations: "; l - 1
+89 print "$"
 100 end
 
 1000 for i = 1 to 9

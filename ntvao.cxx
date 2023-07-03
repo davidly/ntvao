@@ -67,6 +67,11 @@ static void usage( char const * perr = 0 )
     printf( "            for the Apple 1's speed use -s:1022727\n" );
     printf( "     -t     enable debug tracing to ntvao.log\n" );
     printf( "     -u     disable converting output chars to uppercase.\n" );
+
+#ifndef NDEBUG
+    printf( "(debug build)\n" );
+#endif
+
     printf( "  notes:\n" );
     printf( "     --     to assemble, load, and run test.s:\n" );
     printf( "                sbasm30306\\sbasm.py test.s\n" );

@@ -21,7 +21,7 @@
 #define ScoreLose  4
 #define ScoreMax 9
 #define ScoreMin 2
-#define DefaultIterations 100
+#define DefaultIterations 1
 
 #define PieceX 1
 #define PieceO 2
@@ -249,14 +249,14 @@ int MinMax( alpha, beta, depth, move ) char alpha; char beta; char depth; char m
 #endif
 
                 if ( score > value )
+                {
                     value = score;
-
 #if ABPrune
-                if ( value > alpha )
-                    alpha = value;
-
-                if ( alpha >= beta )
-                    return value;
+                    if ( value >= beta )
+                        return value;
+                    if ( value > alpha )
+                        alpha = value;
+                }
 #endif
             }
             else
@@ -267,15 +267,15 @@ int MinMax( alpha, beta, depth, move ) char alpha; char beta; char depth; char m
 #endif
 
                 if ( score < value )
+                {
                     value = score;
-
 #if ABPrune
-                if ( value < beta )
-                    beta = value;
-
-                if ( beta <= alpha )
-                    return value;
+                    if ( value <= alpha )
+                        return value;
+                    if ( value < beta )
+                        beta = value;
 #endif
+                }
             }
         }
     }
