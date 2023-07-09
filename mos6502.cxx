@@ -274,10 +274,23 @@ void MOS_6502::op_pop_pf()
     fNegative = ( 0 != ( pf & 0x80 ) );
     fOverflow = ( 0 != ( pf & 0x40 ) );
     fDecimal = ( 0 != ( pf & 0x08 ) );
-    fInterrupt = ( 0 != ( pf & 0x04 ) );
+    fInterruptDisable = ( 0 != ( pf & 0x04 ) );
     fZero = ( 0 != ( pf & 0x02 ) );
     fCarry = ( 0 != ( pf & 0x01 ) ); 
 } // op_pop_pf
+
+void MOS_6502::op_php()
+{
+    pf = 0x20; // unused bit always set
+    if ( fNegative ) pf |= 0x80;
+    if ( fOverflow ) pf |= 0x40;
+    pf |= 0x10; // Break is always set for software int BRK or PHP to distinguish from a hardware int
+    if ( fDecimal ) pf |= 0x08;
+    if ( fInterruptDisable ) pf |= 0x04;
+    if ( fZero ) pf |= 0x02;
+    if ( fCarry ) pf |= 0x01;
+    push( pf );
+} //op_php
 
 uint64_t MOS_6502::emulate( uint64_t maxcycles )
 {
@@ -312,18 +325,19 @@ _restart_op:
 
         switch( op )  // switch on fixed opcodes to use a jump table
         {
-            case 0x00: { fBreak = true; fInterrupt = true; break; } // brk
+            case 0x00: // brk
+            {
+                uint16_t returnAddress = pc + 2; // brk is a 00 + one padding/intent byte; return past the padding
+                push( returnAddress >> 8 );
+                push( returnAddress & 0xff );
+                op_php(); // push with old state of interrupt flag
+                fInterruptDisable = true;
+                nextpc = mword( 0xfffe ); // jump to the IRQ software interrupt vector
+                break;
+            }
             case 0x08: // php
             {
-                pf = 0x20; // unused bit always set
-                if ( fNegative ) pf |= 0x80;
-                if ( fOverflow ) pf |= 0x40;
-                if ( true || fBreak ) pf |= 0x10;
-                if ( fDecimal ) pf |= 0x08;
-                if ( fInterrupt ) pf |= 0x04;
-                if ( fZero ) pf |= 0x02;
-                if ( fCarry ) pf |= 0x01;
-                push( pf );
+                op_php();
                 break;
             }
             case 0x0f: { op = mos6502_invoke_hook(); goto _restart_op; } // hook
@@ -332,7 +346,7 @@ _restart_op:
             {
                 uint16_t address = mword( pc + 1 );
                 uint16_t returnAddress = pc + 2;  // it's really +3, but this is how the 6502 works
-                push( ( returnAddress >> 8 ) & 0xff );
+                push( returnAddress >> 8 );
                 push( returnAddress & 0xff );
                 nextpc = address;
                 break;
@@ -345,16 +359,16 @@ _restart_op:
             {
                 op_pop_pf();
                 nextpc = pop();
-                nextpc |= ( ( ( (uint16_t) pop() ) << 8 ) & 0xff00 );
+                nextpc |= ( ( (uint16_t) pop() ) << 8 );
                 break;
             }
             case 0x48: { push( a ); break; } // pha
             case 0x4c: { nextpc = mword( pc + 1 ); break; } // jmp a16
-            case 0x58: { fInterrupt = false; break; } // cli
+            case 0x58: { fInterruptDisable = false; break; } // cli
             case 0x60: { uint16_t lo = pop(); nextpc = 1 + ( ( (uint16_t) pop() << 8 ) | lo ); break; } // rts
             case 0x68: { a = pop(); set_nz( a ); break; } // pla    NZ
             case 0x6c: { nextpc = mword( mword( pc + 1 ) ); break; } // jmp (a16)
-            case 0x78: { fInterrupt = true; break; } // sei
+            case 0x78: { fInterruptDisable = true; break; } // sei
             case 0x88: { y--; set_nz( y ); break; } // dey
             case 0x8a: { a = x; set_nz( a ); break; } // txa
             case 0x98: { a = y; set_nz( a ); break; } // tya

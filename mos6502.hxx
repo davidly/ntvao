@@ -23,11 +23,12 @@ struct MOS_6502
     uint16_t pc;
     uint8_t pf;   // NV-BDIZC
 
-    bool fNegative, fOverflow, fUnused, fBreak, fDecimal, fInterrupt, fZero, fCarry;
+    bool fNegative, fOverflow, fUnused, fDecimal, fInterruptDisable, fZero, fCarry;
 
     void power_on()
     {
         pc = memory[ 0xfffc ] | ( memory[ 0xfffd ] << 8 );
+        fInterruptDisable = true; // the only flag with a defined value on reset
     } //powerOn
 
     const char * render_flags()
@@ -36,9 +37,8 @@ struct MOS_6502
         size_t next = 0;
         ac[ next++ ] = fNegative ? 'N' : 'n';
         ac[ next++ ] = fOverflow ? 'V' : 'v';
-        ac[ next++ ] = fBreak ? 'B' : 'b';
         ac[ next++ ] = fDecimal ? 'D' : 'd';
-        ac[ next++ ] = fInterrupt ? 'I' : 'i';
+        ac[ next++ ] = fInterruptDisable ? 'I' : 'i';
         ac[ next++ ] = fZero ? 'Z' : 'z';
         ac[ next++ ] = fCarry ? 'C' : 'c';
         ac[ next ] = 0;
@@ -53,6 +53,7 @@ struct MOS_6502
     void op_bcd_math( uint8_t math, uint8_t rhs );
     uint8_t op_rotate( uint8_t rotate, uint8_t val );
     void op_cmp( uint8_t lhs, uint8_t rhs );
+    void op_php();
 
     void set_nz( uint8_t val )
     {
