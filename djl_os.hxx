@@ -16,7 +16,9 @@
     #include <direct.h>
     #include <intrin.h>
 
-    inline void sleep_ms( uint64_t ms ) { SleepEx( ms, FALSE ); }
+    #define not_inlined __declspec(noinline)
+
+    inline void sleep_ms( uint64_t ms ) { SleepEx( (DWORD) ms, FALSE ); }
 
     inline bool file_exists( char const * pfile )
     {
@@ -24,13 +26,45 @@
         return ( ( INVALID_FILE_ATTRIBUTES != attr ) && ( ! ( FILE_ATTRIBUTE_DIRECTORY & attr ) ) );
     } //file_exists
 
+    inline void bump_thread_priority() { SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST ); }
+
+    inline void set_process_affinity( uint64_t processAffinityMask )
+    {
+        SetProcessAffinityMask( (HANDLE) -1, processAffinityMask );
+    }
+
 #else // Linux, MacOS, etc.
 
     #ifndef OLDGCC
         #include <termios.h>
     #endif
 
+    #include <thread>
+    #include <sched.h>
+    #include <unistd.h>
     #include <ctype.h>
+
+    #define not_inlined
+
+    inline void bump_thread_priority() {}
+
+    inline void set_process_affinity( uint64_t processAffinityMask )
+    {
+#if !defined(__APPLE__)
+        cpu_set_t mask;
+        CPU_ZERO( &mask );
+
+        for ( long l = 0; l < 32; l++ )
+        {
+            int b = ( 1 << l );
+            if ( 0 != ( b & processAffinityMask ) )
+                CPU_SET( l, &mask );
+        }
+
+        // this does nothing on WSL 1 or 2 except make you believe it might work until you actually check
+        int status = sched_setaffinity( 0, sizeof( mask ), &mask );
+#endif
+    } //set_process_affinity
 
     template < typename T, size_t N > size_t _countof( T ( & arr )[ N ] ) { return std::extent< T[ N ] >::value; }    
     #define _stricmp strcasecmp
@@ -43,12 +77,16 @@
         return s;
     } //strupr
 
+    inline char * _strupr( char * s ) { return strupr( s ); }
+
     inline char * strlwr( char * s )
     {
         for ( char * t = s; *t; t++ )
             *t = tolower( *t );
         return s;
     } //strlwr
+
+    inline char * _strlwr( char * s ) { return strlwr( s ); }
 
     inline void sleep_ms( uint64_t ms )
     {
