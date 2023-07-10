@@ -667,6 +667,8 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
     cpu.pc = g_startAddress;
     cpu.sp = 0xff;
 
+    // initialize memory-mapped I/O for keyboard and display
+
     memory[ 0xd010 ] = 0;
     memory[ 0xd011 ] = 0;
     memory[ 0xd012 ] = 0;

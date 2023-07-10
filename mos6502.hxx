@@ -21,7 +21,7 @@ struct MOS_6502
     uint8_t y;
     uint8_t sp;   // 0x01 is the implicit high byte
     uint16_t pc;
-    uint8_t pf;   // NV-BDIZC
+    uint8_t pf;   // NV-BDIZC. State is tracked in bools below and only updated for pf and php
 
     bool fNegative, fOverflow, fUnused, fDecimal, fInterruptDisable, fZero, fCarry;
 

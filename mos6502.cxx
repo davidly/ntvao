@@ -8,7 +8,7 @@
 //           http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
 //           https://onlinedisassembler.com/odaweb/
 // Tested with a handful of small apps and apps compiled with the BA BASIC compiler in my TTT repo.
-// 100% success (with ROM_vectors=0) with 6502_functional_test.a65 from https://github.com/Klaus2m5/6502_65C02_functional_tests
+// 100% success with 6502_functional_test.a65 from https://github.com/Klaus2m5/6502_65C02_functional_tests
 // Success with that test means an infinite loop at address 0x347d (if you don't modify the sources).
 // Tested with the Wozniak Apple 1 Monitor and BASIC interpreter.
 // Tested with C apps compiled with Aztec and CC65 compilers.
@@ -19,9 +19,7 @@
 
 static uint32_t g_State = 0;
 
-const uint32_t stateTraceInstructions = 1;
-const uint32_t stateEndEmulation = 2;
-const uint32_t stateSoftReset = 4;
+enum enumState : uint32_t { stateTraceInstructions = 1, stateEndEmulation = 2, stateSoftReset = 4 };
 
 void MOS_6502::trace_instructions( bool t ) { if ( t ) g_State |= stateTraceInstructions; else g_State &= ~stateTraceInstructions; }
 void MOS_6502::end_emulation() { g_State |= stateEndEmulation; }
@@ -34,7 +32,7 @@ struct Instruction
 {
     uint8_t length;            // # of bytes used by the instruction
     uint8_t cycles;            // base # of cpu cycles. conditional branches and page-crossing addressing use more
-    const char assembly[ 14 ];
+    const char assembly[ 14 ]; // 14 so indexing the array is a power of 2
 };
 
 // instructions with zeroes are not documented and not supported. hook and halt are illegal, but used for emulation.
@@ -335,11 +333,7 @@ _restart_op:
                 nextpc = mword( 0xfffe ); // jump to the IRQ software interrupt vector
                 break;
             }
-            case 0x08: // php
-            {
-                op_php();
-                break;
-            }
+            case 0x08: { op_php(); break; } // php
             case 0x0f: { op = mos6502_invoke_hook(); goto _restart_op; } // hook
             case 0x18: { fCarry = false; break; } // clc
             case 0x20: // jsr a16
