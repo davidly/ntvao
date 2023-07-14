@@ -67,11 +67,6 @@ static void usage( char const * perr = 0 )
     printf( "            for the Apple 1's speed use -s:1022727\n" );
     printf( "     -t     enable debug tracing to ntvao.log\n" );
     printf( "     -u     disable converting output chars to uppercase.\n" );
-
-#ifndef NDEBUG
-    printf( "(debug build)\n" );
-#endif
-
     printf( "  notes:\n" );
     printf( "     --     to assemble, load, and run test.s:\n" );
     printf( "                sbasm30306\\sbasm.py test.s\n" );
@@ -87,6 +82,7 @@ static void usage( char const * perr = 0 )
     printf( "                ^q        quit ntvao at the next app keyboard read\n" );
     printf( "                ^r        soft reset via the 6502's 0xfffc reset vector\n" );
     printf( "                ^break    forcibly exit the app\n" );
+    printf( "  built for %s %s on %s, by %s on %s\n", target_platform(), build_type(), __TIMESTAMP__, compiler_used(), build_platform() );
     exit( -1 );
 } //usage
 
