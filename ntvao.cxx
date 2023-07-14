@@ -47,6 +47,9 @@ static ConsoleConfiguration * g_pConsoleConfiguration = 0;
 
 static void usage( char const * perr = 0 )
 {
+    if ( g_pConsoleConfiguration )
+        g_pConsoleConfiguration->RestoreConsole( false );
+
     if ( perr )
         printf( "error: %s\n", perr );
 
@@ -82,7 +85,7 @@ static void usage( char const * perr = 0 )
     printf( "                ^q        quit ntvao at the next app keyboard read\n" );
     printf( "                ^r        soft reset via the 6502's 0xfffc reset vector\n" );
     printf( "                ^break    forcibly exit the app\n" );
-    printf( "  built for %s %s on %s, by %s on %s\n", target_platform(), build_type(), __TIMESTAMP__, compiler_used(), build_platform() );
+    printf( "  %s\n", build_string() );
     exit( -1 );
 } //usage
 
@@ -178,6 +181,8 @@ void mos6502_hard_exit( const char * perror, uint8_t val )
 
     printf( perror, val );
     tracer.Trace( perror, val );
+    tracer.Trace( "  %s\n", build_string() );
+    printf( "  %s\n", build_string() );
 
     exit( 1 );
 } //mos6502_hard_exit
