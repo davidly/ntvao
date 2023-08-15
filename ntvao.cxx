@@ -121,6 +121,13 @@ void mos6502_invoke_halt( void )
     g_executionEnded = true;
 } //mos6502_invoke_halt
 
+char printable( uint8_t x )
+{
+    if ( x < ' ' || x >= 127 )
+        return ' ';
+    return x;
+} //printable
+
 // this hook is invoked to emulate an Apple 1 if the Apple 1 monitor isn't installed
 
 uint8_t mos6502_invoke_hook( void )
@@ -129,21 +136,21 @@ uint8_t mos6502_invoke_hook( void )
 
     if ( 0xffe5 == address ) // apple 1
     {
-        tracer.Trace( "ffe5 hook invoked; writing hex\n" );
+        tracer.Trace( "ffe5 hook invoked; writing hex nibble %X\n", 0xf & cpu.a );
         printf( "%X", 0xf & cpu.a );
         fflush( stdout );
         return 0x60; // rts
     }
     else if ( 0xffdc == address ) // apple 1
     {
-        tracer.Trace( "ffdc hook invoked; writing hex\n" );
+        tracer.Trace( "ffdc hook invoked; writing hex byte %02X\n", cpu.a );
         printf( "%02X", cpu.a );
         fflush( stdout );
         return 0x60; // rts
     }
     else if ( 0xffef == address ) // apple 1
     {
-        tracer.Trace( "ffef hook invoked; writing character\n" );
+        tracer.Trace( "ffef hook invoked; writing character %02x, '%c'\n", cpu.a, printable( cpu.a ) );
 
         char c = cpu.a;
         if ( 0x0d != c )
@@ -251,6 +258,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
             // 1..26 are ^a through ^z. ^c isn't sent through _getch. pass through carriage returns and backspace
 
             char ch = ConsoleConfiguration::portable_getch();
+            tracer.Trace( "d011 kbdcr read getch %02x == '%c'\n", ch, printable( ch ) );
             if ( 0xa == ch )
                 ch = 0xd;
 
@@ -263,8 +271,9 @@ uint8_t mos6502_apple1_load( uint16_t address )
                     g_executionEnded = true;
                     cpu.end_emulation();
                 }
-                else if ( 3 == ch ) // 'c' ... this never happens on Windows, which uses ControlHandler looking for ^C
+                else if ( 3 == ch ) // 'c'
                 {
+                    tracer.Trace( "  control c in d011 processing... telling the emulator to exit\n" );
                     g_executionEnded = true;
                     cpu.end_emulation();
                 }
@@ -289,6 +298,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
             // put the character in the buffer to be read later
 
+            tracer.Trace( "d011 kbdcr saving char for later %02x == '%c'\n", ch, printable( ch ) );
             g_inputText.resize( 1 );
             g_inputText[ 0 ] = ch;
             g_inputOffset = 0;
@@ -315,6 +325,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
             }
 
             ch = toupper( ch );      // the Apple 1 expects only upppercase
+            tracer.Trace( "d010 kbd returning %02x == '%c' except with the high bit on\n", ch, printable( ch ) );
             ch |= 0x80;              // the high bit should be set on the Apple 1
             memory[ 0xd011 ] = 0;    // this should already be reset
             return ch;
@@ -325,7 +336,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
         if ( ConsoleConfiguration::portable_kbhit() )
         {
             char ch = ConsoleConfiguration::portable_getch();
-            tracer.Trace( "_getch returned %02x\n", ch );
+            tracer.Trace( "d010 kbd _getch returned %02x == '%c'\n", ch, printable( ch ) );
             ch = toupper( ch );      // the Apple 1 expects only upppercase
             ch |= 0x80;              // the high bit should be set on the Apple 1
             memory[ 0xd011 ] = 0;    // this should already be reset
@@ -348,7 +359,7 @@ void mos6502_apple1_store( uint16_t address )
             if ( 0x0d == ch )
                 ch = 0x0a;
 
-            tracer.Trace( "d012 store invoked; outputting character %02x '%c'\n", ch, ch );
+            tracer.Trace( "d012 store invoked; outputting character %02x == '%c'\n", ch, printable( ch ) );
             printf( "%c", ch );
             fflush( stdout );
         }
@@ -726,7 +737,7 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
     return cycles_executed;
 } //invoke_command
 
-#ifdef _MSC_VER
+#ifdef _MSC_VER // unused for now; perhaps add if we need asyncronous ^c handling
 
     BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
     {
@@ -883,7 +894,7 @@ int main( int argc, char * argv[] )
     ConsoleConfiguration consoleConfig;
     g_pConsoleConfiguration = &consoleConfig;
     if ( g_use40x24 )
-        consoleConfig.EstablishConsole( 40, 24, (void *) ControlHandler );
+        consoleConfig.EstablishConsoleOutput( 40, 24 );
 
     high_resolution_clock::time_point tStart = high_resolution_clock::now();
 

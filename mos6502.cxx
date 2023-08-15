@@ -32,7 +32,7 @@ struct Instruction
 {
     uint8_t length;            // # of bytes used by the instruction
     uint8_t cycles;            // base # of cpu cycles. conditional branches and page-crossing addressing use more
-    const char assembly[ 14 ]; // 14 so indexing the array is a power of 2
+    const char assembly[ 14 ]; // 14 so indexing the array is a power of 2 since this struct is 16 bytes.
 };
 
 // instructions with zeroes are not documented and not supported. hook and halt are illegal, but used for emulation.
