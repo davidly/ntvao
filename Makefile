@@ -9,8 +9,12 @@ ntvao.o: ntvao.cxx mos6502.hxx
 mos6502.o: mos6502.cxx mos6502.hxx
 	$(CXX) $(CXXFLAGS) -c $<
 
+.PHONY: check install clean
 check: ntvao
 	./$< -c hello.hex
+
+install: ntvao
+	install -s $< /usr/local/bin
 
 clean:
 	$(RM) ntvao.o mos6502.o
