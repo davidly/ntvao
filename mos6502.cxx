@@ -19,7 +19,9 @@
 
 static uint32_t g_State = 0;
 
-enum enumState : uint32_t { stateTraceInstructions = 1, stateEndEmulation = 2, stateSoftReset = 4 };
+#define stateTraceInstructions 1
+#define stateEndEmulation 2
+#define stateSoftReset 4
 
 void MOS_6502::trace_instructions( bool t ) { if ( t ) g_State |= stateTraceInstructions; else g_State &= ~stateTraceInstructions; }
 void MOS_6502::end_emulation() { g_State |= stateEndEmulation; }

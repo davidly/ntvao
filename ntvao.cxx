@@ -28,9 +28,15 @@
 #include <chrono>
 #include <cstring>
 
+#include <ctype.h>
+
 #include <djl_os.hxx>
 #include <djltrace.hxx>
+
+#ifndef WATCOM
 #include <djl_cycle.hxx>
+#endif
+
 #include <djl_con.hxx>
 
 #include "mos6502.hxx"
@@ -202,7 +208,7 @@ void LoadInputFile()
     printf( "filename to read: " );
     fflush( stdout );
     char acfilename[ MAX_PATH ];
-    char * result = ConsoleConfiguration::portable_gets_s( acfilename, _countof( acfilename ) );
+    char * result = g_pConsoleConfiguration->portable_gets_s( acfilename, _countof( acfilename ) );
     if ( result )
     {
         tracer.Trace( "reading file %s to input stream\n", result );
@@ -252,12 +258,12 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
         g_KbdPeekHappened = true;
 
-        if ( ConsoleConfiguration::portable_kbhit() )
+        if ( g_pConsoleConfiguration->portable_kbhit() )
         {
             // if the input event is a control character, process it and don't pass it on
             // 1..26 are ^a through ^z. ^c isn't sent through _getch. pass through carriage returns and backspace
 
-            char ch = ConsoleConfiguration::portable_getch();
+            char ch = g_pConsoleConfiguration->portable_getch();
             tracer.Trace( "d011 kbdcr read getch %02x == '%c'\n", ch, printable( ch ) );
             if ( 0xa == ch )
                 ch = 0xd;
@@ -333,9 +339,9 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
         g_KbdPeekHappened = true;
 
-        if ( ConsoleConfiguration::portable_kbhit() )
+        if ( g_pConsoleConfiguration->portable_kbhit() )
         {
-            char ch = ConsoleConfiguration::portable_getch();
+            char ch = g_pConsoleConfiguration->portable_getch();
             tracer.Trace( "d010 kbd _getch returned %02x == '%c'\n", ch, printable( ch ) );
             ch = toupper( ch );      // the Apple 1 expects only upppercase
             ch |= 0x80;              // the high bit should be set on the Apple 1
@@ -709,7 +715,9 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
 
     g_executionEnded = false;
     uint64_t cycles_executed = 0;
+#ifndef WATCOM
     CPUCycleDelay delay( clockrate );
+#endif
     uint64_t cycles_since_last_kbd_peek = 0;
 
     do
@@ -725,13 +733,17 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         {
             // peeking the keyboard sleeps, throwing off execution times. Start again.
 
+#ifndef WATCOM
             delay.Reset();
+#endif
             cycles_since_last_kbd_peek = 0;
             g_KbdPeekHappened = false;
             continue;
         }
 
+#ifndef WATCOM
         delay.Delay( cycles_since_last_kbd_peek );
+#endif
     } while ( true );
 
     return cycles_executed;
@@ -795,9 +807,9 @@ static int ends_with( const char * str, const char * end )
     return ( 0 == _stricmp( str + len - lenend, end ) );
 } //ends_with
 
-void fill_random( uint8_t *p, size_t c )
+void fill_random( uint8_t *p, long c )
 {
-    for ( size_t i = 0; i < c; i++ )
+    for ( long i = 0; i < c; i++ )
         p[ i ] = (uint8_t) rand();
 } //fill_random
 
@@ -896,7 +908,9 @@ int main( int argc, char * argv[] )
     if ( g_use40x24 )
         consoleConfig.EstablishConsoleOutput( 40, 24 );
 
+#ifndef WATCOM
     high_resolution_clock::time_point tStart = high_resolution_clock::now();
+#endif
 
     uint64_t total_cycles = invoke_command( ( 0 != acHex[ 0 ] ) ? acHex : 0, clockrate );
 
@@ -905,10 +919,13 @@ int main( int argc, char * argv[] )
     printf( "\n" );
     if ( showPerformance )
     {
+        char ac[ 100 ];
+#ifdef WATCOM
+        printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
+#else
         high_resolution_clock::time_point tDone = high_resolution_clock::now();
         long long totalTime = duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
 
-        char ac[ 100 ];
         printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( totalTime, ac ) );
         printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
         printf( "clock rate: " );
@@ -927,6 +944,7 @@ int main( int argc, char * argv[] )
         }
         else
             printf( "      %20s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
+#endif
     }
 
     tracer.Shutdown();
