@@ -1,5 +1,5 @@
 # ntvao
-NT Virtual Apple One. Apple 1 emulator for Windows, MacOS, and Linux.
+NT Virtual Apple One. Apple 1 emulator for Windows, MacOS, Linux, and real-mode 8086 DOS.
 
 This app (like many others!) emulates an Apple 1. To invoke it in that mode, run ntvao with no arguments.
 
@@ -49,6 +49,7 @@ file descriptions:
     m.bat:            builds ntvao.exe using a Visual Studio vcvars64.bat environment. mr.bat for release.
     mg.bat            builds using mingw64 g++. mgr.bat for release.
     m.sh:             builds ntvao on Linux. mr.sh for release.
+    mwatcom.bat:      builds ntvao on Windows targeting real-mode 8086 DOS using the Watcom compiler.
     6502_functional_test.hex: test suite for the 6502 from Klaus Dormann: https://github.com/Klaus2m5/6502_65C02_functional_tests
     run_fun_test.bat: invokes ntvao with the test suite for validation
     ttta1.bas:        Apple 1 BASIC app to prove you can't win a Nuclear War per War Games
@@ -76,7 +77,7 @@ notes:
     don't work.
     
     The name is from ntvdm -- the Windows NT Virtual DOS Machine.
-    
+
     The -p switch shows runtime information. In this example, the app took 21 seconds to run, 
     but on a real Apple 1 it would have taken three and a half hours.
     
