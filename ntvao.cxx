@@ -64,7 +64,7 @@ static void usage( char const * perr = 0 )
     printf( "  arguments:\n" );
     printf( "     -a     address at which the run is started, e.g. /a:0x1000\n" );
     printf( "            this overrides the default, which is 0xff00 or the first address in the input file.\n" );
-#ifdef _MSC_VER
+#ifdef _WIN32
     printf( "     -c     don't set the console to 40x24. do exit ntvao when the Apple 1 app completes.\n" );
 #else
     printf( "     -c     Exit ntvao when the Apple 1 app completes.\n" );
@@ -94,6 +94,20 @@ static void usage( char const * perr = 0 )
     printf( "  %s\n", build_string() );
     exit( -1 );
 } //usage
+
+#ifdef WATCOM
+    #include <dos.h>
+    uint32_t DosTimeInMS()
+    {
+        struct dostime_t tNow;
+        _dos_gettime( &tNow );
+        uint32_t t = (uint32_t) tNow.hour * 60 * 60 * 100;
+        t += (uint32_t) tNow.minute * 60 * 100;
+        t += (uint32_t) tNow.second * 100;
+        t += (uint32_t) tNow.hsecond;
+        return t * 10;
+    } //DosTimeInMS
+#endif //WATCOM
 
 static void CreateMemoryDump()
 {
@@ -749,7 +763,7 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
     return cycles_executed;
 } //invoke_command
 
-#ifdef _MSC_VER // unused for now; perhaps add if we need asyncronous ^c handling
+#ifdef _WIN32 // unused for now; perhaps add if we need asyncronous ^c handling
 
     BOOL WINAPI ControlHandler( DWORD fdwCtrlType )
     {
@@ -908,7 +922,9 @@ int main( int argc, char * argv[] )
     if ( g_use40x24 )
         consoleConfig.EstablishConsoleOutput( 40, 24 );
 
-#ifndef WATCOM
+#ifdef WATCOM
+    uint32_t tStart = DosTimeInMS();
+#else
     high_resolution_clock::time_point tStart = high_resolution_clock::now();
 #endif
 
@@ -921,12 +937,12 @@ int main( int argc, char * argv[] )
     {
         char ac[ 100 ];
 #ifdef WATCOM
-        printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
+        uint32_t elapsedMS = DosTimeInMS() - tStart;
 #else
         high_resolution_clock::time_point tDone = high_resolution_clock::now();
-        long long totalTime = duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
-
-        printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( totalTime, ac ) );
+        uint32_t elapsedMS = (uint32_t) duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
+#endif
+        printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( elapsedMS, ac ) );
         printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
         printf( "clock rate: " );
         if ( 0 == clockrate )
@@ -944,9 +960,9 @@ int main( int argc, char * argv[] )
         }
         else
             printf( "      %20s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
-#endif
     }
 
+    fflush( stdout );
     tracer.Shutdown();
 } //main
 
