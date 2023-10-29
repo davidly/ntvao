@@ -75,6 +75,8 @@ notes:
     
     Tracing with -t -i to ntvao.log disassembles code as it runs, so you can see how things work, or 
     don't work.
+
+    Built and tested on Windows on x86, AMD64, and Arm64. Also Linux on Arm32, Arm64, and AMD64. Also on MacOS on an M1.
     
     The name is from ntvdm -- the Windows NT Virtual DOS Machine.
 
