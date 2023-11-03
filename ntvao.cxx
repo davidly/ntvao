@@ -385,7 +385,7 @@ void mos6502_apple1_store( uint16_t address )
             printf( "%c", ch );
             fflush( stdout );
         }
-        memory[ 0xd012 ] = 0;  // Indicate that the character has been consumed
+        memory[ 0xd012 ] = ch;  // Indicate that the character has been consumed
     }
 } //mos6502_apple1_store
 
