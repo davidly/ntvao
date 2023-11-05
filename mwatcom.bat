@@ -1,7 +1,9 @@
-rem this build script targets 16-bit 8086 DOS.
-rem I used:  Open Watcom C/C++ x86 16-bit Compile and Link Utility
-rem          Version 2.0 beta Oct  9 2023 02:19:55 (64-bit)
-rem from:    https://github.com/open-watcom/open-watcom-v2/releases/tag/Current-build
+@echo off
+setlocal
+SET WATCOM=C:\WATCOM
+SET PATH=%WATCOM%\BINNT64;%WATCOM%\BINNT;%PATH%
+SET EDPATH=%WATCOM%\EDDAT
+SET INCLUDE=%WATCOM%\H;%WATCOM%\H\NT;..\djl
 
-wcl -ml -obmir -s -0 -xs -j -oe=128 -ol+ -ot ntvao.cxx mos6502.cxx -bcl=DOS /I. /DWATCOM /DNDEBUG
+wcl -q -zp=1 -ml -obmr -oh -ei -oi -s -0 -xs -j -oe=160 -ol+ -ot ntvao.cxx mos6502.cxx -bcl=DOS -k8192 -fe=ntvaodos.exe /DWATCOM /DNDEBUG
 

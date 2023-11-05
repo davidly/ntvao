@@ -614,14 +614,20 @@ static bool load_file_intel_format( FILE * fp )
 // 1020: 2D 20 EF FF 4C 2F 10 A9
 // 1028: 43 20 EF FF 4C 2F 10 A9
 // 1030: 24 20 EF FF 4C 1F FF
+//
+// Alternatively:
+// 2000: A2 00 A9 A0 9D 00 24 9D 00 25 9D 00 26 9D 00 27 E8 D0 F1 BD 80 21 20 EF FF E8 E0 38 D0 F5 20 02
+// : 21 C9 8D D0 F9 20 3F 21 29 3F 69 20 85 F9 A0 00 20 3F 21 29 03 18 69 24 85 F1 A5 FA 85 F0 A9 AA
+// : 91 F0 C6 F9 D0 EA A9 24 85 F9 A9 40 85 F8 A2 27 A9 AD 9D D8 27 9D 40 24 CA 10 F7 B1 F8 20 EF FF
+// : E6 F8 D0 F7 E6 F9 A5 F9 C9 28 D0 EF 20 02 21 A0 00 20 F3 20 B1 F0 91 F2 E6 F0 E6 F2 D0 F6 E6 F1
+// : E6 F3 A5 F1 C9 28 D0 EC 20 61 21 A0 00 B1 F2 C9 AA D0 0A A0 27 20 14 21 A0 01 20 1D 21 E6 F0 E6
 
 static bool load_file( char const * file_path )
 {               
     bool ok = false;
     FILE *fp = fopen( file_path, "r" );
     char acLine[ 120 ];
-    bool first_address = true;
-    uint16_t initial_address = 0;
+    uint16_t run_address = 0;
 
     if ( 0 != fp )
     {
@@ -632,45 +638,59 @@ static bool load_file( char const * file_path )
             return load_file_intel_format( fp );
 
         // read the file and write the data into memory
+        uint16_t a; // address of next byte to write
 
         do
         {
             char * buf = fgets( acLine, _countof( acLine), fp );
 
-            if ( buf && strlen( buf ) >= 7 )
+            if ( buf && strlen( buf ) >= 3 )
             {
-                if ( ':' != buf[ 4 ] || ' ' != buf[ 5 ] )
-                    usage( "error: input HEX file is malformed" );
+                char * pcolon = strchr( buf, ':' );
+                if ( !pcolon )
+                    usage( "input hex file has a line without a colon, which is invalid" );
 
-                uint16_t a = (uint16_t) strtoul( buf, 0, 16 );
-                if ( first_address )
+                if ( pcolon != buf )
                 {
-                    first_address = false;
-                    initial_address = a;
+                    a = (uint16_t) strtoul( buf, 0, 16 );
+                    tracer.Trace( "new load start address %#04x\n", a );
 
-                    if ( !g_fStartAddressSpecified )
-                        g_startAddress = a;
+                    if ( run_address < 0x100 ) // don't try to run 0-page initialized data if there is something more likely
+                    {
+                        run_address = a;
+    
+                        if ( !g_fStartAddressSpecified )
+                            g_startAddress = a;
+
+                        tracer.Trace( "run_address set to %#04x, g_startAddress %#04x\n", run_address, g_startAddress );
+                    }
                 }
 
-                char * pbyte = acLine + 5; // at the space
+                char * pnext = pcolon + 1;
+
                 ok = true;
 
-                while ( ' ' == *pbyte && ishex( * ( pbyte + 1 ) ) )
+                do
                 {
-                    pbyte++;
+                    while ( ' ' == *pnext )
+                        pnext++;
 
-                    uint8_t b = (uint8_t) strtoul( pbyte, 0, 16 );
-                    pbyte += 2;
-                    memory[ a++ ] = b;
+                    if ( ishex( *pnext ) && ishex( * ( pnext + 1 ) ) )
+                    {
+                        uint8_t b = (uint8_t) strtoul( pnext, 0, 16 );
+                        pnext += 2;
+                        memory[ a++ ] = b;
+                    }
+                    else
+                        break;
                 }
+                while ( true );
             }
-            else
-                break;
-        } while ( true );
+        } while ( !feof( fp ) );
 
         fclose( fp );
 
-        tracer.TraceBinaryData( memory + initial_address, 0x100, 2 );
+        tracer.TraceBinaryData( memory + run_address, 0x100, 2 );
     }
 
     return ok;
@@ -687,7 +707,7 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         bool ok = load_file( pcFile );
         if ( !ok )
         {
-            printf( "unable to load command %s\n", pcFile );
+            printf( "unable to load ntvao input command %s\n", pcFile );
 
             if ( g_pConsoleConfiguration )
                 g_pConsoleConfiguration->RestoreConsole();
