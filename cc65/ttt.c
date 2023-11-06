@@ -377,6 +377,8 @@ int main()
     show_string( ac );
 #else
     show_int( g_Moves );
+    show_char( ' ' );
+    show_int( DefaultIterations );
 #endif
 
     show_char( '$' ); // signal to elapsed time measurement app that execution is complete
