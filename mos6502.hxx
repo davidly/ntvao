@@ -4,6 +4,7 @@ extern uint8_t memory[ 65536 ];
 
 #define OPCODE_HOOK 0x0f  // this unused 6502 instruction will call the hook callback
 #define OPCODE_HALT 0xff  // this unused 6502 instruction will terminate the emulator
+#define OPCODE_RTS 0x60   // return from function call
 
 struct MOS_6502
 {

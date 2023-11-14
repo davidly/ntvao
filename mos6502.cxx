@@ -39,7 +39,7 @@ struct Instruction
 
 // instructions with zeroes are not documented and not supported. hook and halt are illegal, but used for emulation.
 
-const Instruction ins_6502[ 256 ] =
+static const Instruction ins_6502[ 256 ] =
 {
     /*00*/ 2,7,"brk",     2,6,"ora (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"ora a8",    2,5,"asl a8",    0,0,"", 
     /*08*/ 1,3,"php",     2,2,"ora #d8",    1,2,"asl a",   0,0,"", 0,0,"",          3,4,"ora a16",   3,6,"asl a16",   1,1,"(hook)", 
@@ -75,12 +75,12 @@ const Instruction ins_6502[ 256 ] =
     /*f8*/ 1,2,"sed",     3,4,"sbc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"sbc a16,x", 3,7,"inc a16,x", 1,1,"(halt)", 
 };
 
-uint16_t mword( uint16_t offset ) { return * ( (uint16_t * ) & memory[ offset ] ); }
-void setmword( uint16_t offset, uint16_t value ) { * ( uint16_t * ) & memory[ offset ] = value; }
-void push( uint8_t x ) { memory[ 0x0100 + cpu.sp ] = x; cpu.sp--; }
-uint8_t pop() { cpu.sp++; return memory[ 0x0100 + cpu.sp ]; }
+static uint16_t mword( uint16_t offset ) { return * ( (uint16_t * ) & memory[ offset ] ); }
+static void setmword( uint16_t offset, uint16_t value ) { * ( uint16_t * ) & memory[ offset ] = value; }
+static void push( uint8_t x ) { memory[ 0x0100 + cpu.sp ] = x; cpu.sp--; }
+static uint8_t pop() { cpu.sp++; return memory[ 0x0100 + cpu.sp ]; }
 
-bool crosses_page( uint16_t address, uint8_t offset )
+static bool crosses_page( uint16_t address, uint8_t offset )
 {
     return ( ( 0xff00 & address ) != ( 0xff00 & ( address + (uint16_t) offset ) ) );
 } //crosses_page
@@ -113,14 +113,10 @@ const char * MOS_6502::render_operation( uint16_t address )
 
 void MOS_6502::trace_state()
 {
-    if ( tracer.IsEnabled() ) // avoid the formatting if not actually tracing
-    {
-        //tracer.TraceBinaryData( & memory[ 0x3f ], 16, 2 );
-        //tracer.TraceBinaryData( & memory[ 0x01f0 ], 16, 2 );
-        tracer.Trace( "pc %04x, op %02x, op2 %02x, op3 %02x, a %02x, x %02x, y %02x, sp %02x, %s, %s\n",
-                      pc, memory[ pc ], memory[ pc + 1 ], memory[ pc + 2 ],
-                      a, x, y, sp, render_flags(), render_operation( pc ) );
-    }
+    //tracer.TraceBinaryData( & memory[ 0x3f ], 16, 2 );
+    tracer.Trace( "pc %04x, op %02x, op2 %02x, op3 %02x, a %02x, x %02x, y %02x, sp %02x, %s, %s\n",
+                  pc, memory[ pc ], memory[ pc + 1 ], memory[ pc + 2 ],
+                  a, x, y, sp, render_flags(), render_operation( pc ) );
 } //trace_state
 
 uint8_t MOS_6502::op_rotate( uint8_t rotate, uint8_t val )
@@ -316,8 +312,6 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
         }
 
         uint8_t op = memory[ pc ];
-
-_restart_op:
         cycles += ins_6502[ op ].cycles;
 
         switch( op )  // switch on fixed opcodes to use a jump table
@@ -414,7 +408,7 @@ _restart_op:
                 break;
             }
             case 0x08: { op_php(); break; } // php
-            case 0x0f: { op = mos6502_invoke_hook(); goto _restart_op; } // hook
+            case 0x0f: { op = mos6502_invoke_hook(); assert( OPCODE_RTS == op ); goto _opc_rts; } // hook
             case 0x10: case 0x30: case 0x50: case 0x70: case 0x90: case 0xb0: case 0xd0: case 0xf0: // conditional branch
             {
                 bool branch;
@@ -465,13 +459,9 @@ _restart_op:
             case 0x48: { push( a ); break; } // pha
             case 0x4c: { pc = mword( pc + 1 ); continue; } // jmp a16
             case 0x58: { fInterruptDisable = false; break; } // cli
-            case 0x60: { uint16_t lo = pop(); pc = 1 + ( ( (uint16_t) pop() << 8 ) | lo ); continue; } // rts
+            case 0x60: { _opc_rts: uint16_t lo = pop(); pc = 1 + ( ( (uint16_t) pop() << 8 ) | lo ); continue; } // rts
             case 0x68: { a = pop(); set_nz( a ); break; } // pla    NZ
-            case 0x6a: case 0x4a: case 0x2a: case 0x0a: // asl, rol, lsr, ror
-            {
-                a = op_rotate( ( op >> 5 ), a );
-                break;
-            }
+            case 0x6a: case 0x4a: case 0x2a: case 0x0a: { a = op_rotate( ( op >> 5 ), a ); break; } // asl, rol, lsr, ror
             case 0x6c: { pc = mword( mword( pc + 1 ) ); continue; } // jmp (a16)
             case 0x78: { fInterruptDisable = true; break; } // sei
             case 0x81: case 0x84: case 0x85: case 0x86: case 0x8c: case 0x8d: case 0x8e: // sta, stx, sty

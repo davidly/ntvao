@@ -156,19 +156,30 @@ uint8_t mos6502_invoke_hook( void )
 {
     uint16_t address = cpu.pc;
 
-    if ( 0xffe5 == address ) // apple 1
+    if ( 0xff1f == address )
     {
-        tracer.Trace( "ffe5 hook invoked; writing hex nibble %X\n", 0xf & cpu.a );
-        printf( "%X", 0xf & cpu.a );
+        tracer.Trace( "ff1f hook invoked; exiting\n" );
+
+        // On the Apple 1 this emits a CR then returns to the monitor
+        // Here the app is just terminated
+
+        printf( "\n" );
         fflush( stdout );
-        return 0x60; // rts
+
+        g_executionEnded = true;
+        cpu.end_emulation();
     }
     else if ( 0xffdc == address ) // apple 1
     {
         tracer.Trace( "ffdc hook invoked; writing hex byte %02X\n", cpu.a );
         printf( "%02X", cpu.a );
         fflush( stdout );
-        return 0x60; // rts
+    }
+    else if ( 0xffe5 == address ) // apple 1
+    {
+        tracer.Trace( "ffe5 hook invoked; writing hex nibble %X\n", 0xf & cpu.a );
+        printf( "%X", 0xf & cpu.a );
+        fflush( stdout );
     }
     else if ( 0xffef == address ) // apple 1
     {
@@ -182,25 +193,11 @@ uint8_t mos6502_invoke_hook( void )
             printf( "%c", c );
             fflush( stdout );
         }
-
-        return 0x60; // rts
     }
-    else if ( 0xff1f == address )
-    {
-        tracer.Trace( "ff1f hook invoked; exiting\n" );
+    else
+        tracer.Trace( "hook invoked but address %04x isn't recognized\n", address );
 
-        // On the Apple 1 this emits a CR then returns to the monitor
-        // Here the app is just terminated
-
-        printf( "\n" );
-        fflush( stdout );
-
-        g_executionEnded = true;
-        cpu.end_emulation();
-        return 0;
-    }
-
-    return memory[ address ];
+    return OPCODE_RTS;
 } //mos6502_invoke_hook
 
 void mos6502_hard_exit( const char * perror, uint8_t val )
@@ -653,7 +650,6 @@ static bool load_file( char const * file_path )
                 if ( pcolon != buf )
                 {
                     a = (uint16_t) strtoul( buf, 0, 16 );
-                    tracer.Trace( "new load start address %#04x\n", a );
 
                     if ( run_address < 0x100 ) // don't try to run 0-page initialized data if there is something more likely
                     {
@@ -733,8 +729,8 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         // Set hooks for Apple 1 API compatibility instead of using the Apple 1 Monitor
         
         memory[ 0xff1f ] = OPCODE_HOOK;   // GETLINE monitor entry point
-        memory[ 0xffe5 ] = OPCODE_HOOK;   // PRHEX. Prints the low nibble in A as hex
         memory[ 0xffdc ] = OPCODE_HOOK;   // PRBYTE. Prints the byte in A as a 2-digit hex number
+        memory[ 0xffe5 ] = OPCODE_HOOK;   // PRHEX. Prints the low nibble in A as hex
         memory[ 0xffef ] = OPCODE_HOOK;   // ECHO character in A to the terminal
     }
     else
