@@ -858,7 +858,11 @@ int main( int argc, char * argv[] )
         char *parg = argv[i];
         char c = *parg;
 
-        if ( '-' == c || '/' == c )
+        if ( '-' == c
+#if defined( WATCOM ) || defined( _WIN32 )
+             || '/' == c
+#endif
+           )
         {
             char ca = tolower( parg[1] );
 
