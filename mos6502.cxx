@@ -288,6 +288,12 @@ void MOS_6502::op_php()
     push( pf );
 } //op_php
 
+void MOS_6502::op_rts()
+{
+    uint16_t lo = pop();
+    pc = 1 + ( ( (uint16_t) pop() << 8 ) | lo );
+} //op_rts
+
 uint64_t MOS_6502::emulate( uint64_t maxcycles )
 {
     uint64_t cycles = 0;
@@ -408,7 +414,7 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                 break;
             }
             case 0x08: { op_php(); break; } // php
-            case 0x0f: { op = mos6502_invoke_hook(); assert( OPCODE_RTS == op ); goto _opc_rts; } // hook
+            case 0x0f: { op = mos6502_invoke_hook(); assert( OPCODE_RTS == op ); op_rts(); continue; } // hook
             case 0x10: case 0x30: case 0x50: case 0x70: case 0x90: case 0xb0: case 0xd0: case 0xf0: // conditional branch
             {
                 bool branch;
@@ -459,7 +465,7 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
             case 0x48: { push( a ); break; } // pha
             case 0x4c: { pc = mword( pc + 1 ); continue; } // jmp a16
             case 0x58: { fInterruptDisable = false; break; } // cli
-            case 0x60: { _opc_rts: uint16_t lo = pop(); pc = 1 + ( ( (uint16_t) pop() << 8 ) | lo ); continue; } // rts
+            case 0x60: { op_rts(); continue; } // rts
             case 0x68: { a = pop(); set_nz( a ); break; } // pla    NZ
             case 0x6a: case 0x4a: case 0x2a: case 0x0a: { a = op_rotate( ( op >> 5 ), a ); break; } // asl, rol, lsr, ror
             case 0x6c: { pc = mword( mword( pc + 1 ) ); continue; } // jmp (a16)

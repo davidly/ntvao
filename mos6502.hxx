@@ -55,6 +55,7 @@ struct MOS_6502
     uint8_t op_rotate( uint8_t rotate, uint8_t val );
     void op_cmp( uint8_t lhs, uint8_t rhs );
     void op_php();
+    void op_rts();
 
     void set_nz( uint8_t val )
     {
