@@ -76,7 +76,7 @@ static const Instruction ins_6502[ 256 ] =
 };
 
 static uint16_t mword( uint16_t offset ) { return * ( (uint16_t * ) & memory[ offset ] ); }
-static void setmword( uint16_t offset, uint16_t value ) { * ( uint16_t * ) & memory[ offset ] = value; }
+//static void setmword( uint16_t offset, uint16_t value ) { * ( uint16_t * ) & memory[ offset ] = value; }
 static void push( uint8_t x ) { memory[ 0x0100 + cpu.sp ] = x; cpu.sp--; }
 static uint8_t pop() { cpu.sp++; return memory[ 0x0100 + cpu.sp ]; }
 

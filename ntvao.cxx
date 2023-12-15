@@ -189,7 +189,7 @@ uint8_t mos6502_invoke_hook( void )
         if ( 0x0d != c )
         {
             if ( g_forceUppercase )
-                c = toupper( c );
+                c = (char) toupper( c );
             printf( "%c", c );
             fflush( stdout );
         }
@@ -276,7 +276,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
             // if the input event is a control character, process it and don't pass it on
             // 1..26 are ^a through ^z. ^c isn't sent through _getch. pass through carriage returns and backspace
 
-            char ch = g_pConsoleConfiguration->portable_getch();
+            char ch = (char) g_pConsoleConfiguration->portable_getch();
             tracer.Trace( "d011 kbdcr read getch %02x == '%c'\n", ch, printable( ch ) );
             if ( 0xa == ch )
                 ch = 0xd;
@@ -343,10 +343,10 @@ uint8_t mos6502_apple1_load( uint16_t address )
                 g_inputText.resize( 0 );
             }
 
-            ch = toupper( ch );      // the Apple 1 expects only upppercase
+            ch = (char) toupper( ch ); // the Apple 1 expects only upppercase
             tracer.Trace( "d010 kbd returning %02x == '%c' except with the high bit on\n", ch, printable( ch ) );
-            ch |= 0x80;              // the high bit should be set on the Apple 1
-            memory[ 0xd011 ] = 0;    // this should already be reset
+            ch |= 0x80;                // the high bit should be set on the Apple 1
+            memory[ 0xd011 ] = 0;      // this should already be reset
             return ch;
         }
 
@@ -354,9 +354,9 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
         if ( g_pConsoleConfiguration->portable_kbhit() )
         {
-            char ch = g_pConsoleConfiguration->portable_getch();
+            char ch = (char) g_pConsoleConfiguration->portable_getch();
             tracer.Trace( "d010 kbd _getch returned %02x == '%c'\n", ch, printable( ch ) );
-            ch = toupper( ch );      // the Apple 1 expects only upppercase
+            ch = (char) toupper( ch );      // the Apple 1 expects only upppercase
             ch |= 0x80;              // the high bit should be set on the Apple 1
             memory[ 0xd011 ] = 0;    // this should already be reset
             return ch;
@@ -628,14 +628,14 @@ static bool load_file( char const * file_path )
 
     if ( 0 != fp )
     {
-        char c = fgetc( fp );
+        char c = (char) fgetc( fp );
         fseek( fp, 0, SEEK_SET );
 
         if ( ':' == c )
             return load_file_intel_format( fp );
 
         // read the file and write the data into memory
-        uint16_t a; // address of next byte to write
+        uint16_t a = 0;
 
         do
         {
@@ -864,7 +864,7 @@ int main( int argc, char * argv[] )
 #endif
            )
         {
-            char ca = tolower( parg[1] );
+            char ca = (char) tolower( parg[1] );
 
             if ( 'a' == ca )
             {
