@@ -847,141 +847,156 @@ void fill_random( uint8_t *p, long c )
 
 int main( int argc, char * argv[] )
 {
-    char * pcHEX = 0;
-    bool trace = false;
-    bool traceInstructions = false;
-    uint64_t clockrate = 0;
-    bool showPerformance = false;
-
-    for ( int i = 1; i < argc; i++ )
+    try
     {
-        char *parg = argv[i];
-        char c = *parg;
-
-        if ( '-' == c
+        char * pcHEX = 0;
+        bool trace = false;
+        bool traceInstructions = false;
+        uint64_t clockrate = 0;
+        bool showPerformance = false;
+    
+        for ( int i = 1; i < argc; i++ )
+        {
+            char *parg = argv[i];
+            char c = *parg;
+    
+            if ( '-' == c
 #if defined( WATCOM ) || defined( _WIN32 )
-             || '/' == c
+                 || '/' == c
 #endif
-           )
-        {
-            char ca = (char) tolower( parg[1] );
-
-            if ( 'a' == ca )
+               )
             {
-                if ( ':' == parg[2] )
+                char ca = (char) tolower( parg[1] );
+    
+                if ( 'a' == ca )
                 {
-                    g_startAddress = (uint16_t) strtoul( parg + 3 , 0, 16 );
-                    g_fStartAddressSpecified = true;
+                    if ( ':' == parg[2] )
+                    {
+                        g_startAddress = (uint16_t) strtoul( parg + 3 , 0, 16 );
+                        g_fStartAddressSpecified = true;
+                    }
+                    else
+                        usage( "colon required after a argument" );
                 }
+                else if ( 's' == ca )
+                {
+                    if ( ':' == parg[2] )
+                        clockrate = (uint64_t) strtoull( parg + 3 , 0, 10 );
+                    else
+                        usage( "colon required after c argument" );
+                }
+                else if ( 'h' == ca )
+                    g_useHooks = true;
+                else if ( 'i' == ca )
+                    traceInstructions = true;
+                else if ( 't' == ca )
+                    trace = true;
+                else if ( 'u' == ca )
+                    g_forceUppercase = false;
+                else if ( 'p' == ca )
+                    showPerformance = true;
+                else if ( 'c' == ca )
+                    g_use40x24 = false;
+                else if ( '?' == ca )
+                    usage();
                 else
-                    usage( "colon required after a argument" );
+                    usage( "invalid argument specified" );
             }
-            else if ( 's' == ca )
-            {
-                if ( ':' == parg[2] )
-                    clockrate = (uint64_t) strtoull( parg + 3 , 0, 10 );
-                else
-                    usage( "colon required after c argument" );
-            }
-            else if ( 'h' == ca )
-                g_useHooks = true;
-            else if ( 'i' == ca )
-                traceInstructions = true;
-            else if ( 't' == ca )
-                trace = true;
-            else if ( 'u' == ca )
-                g_forceUppercase = false;
-            else if ( 'p' == ca )
-                showPerformance = true;
-            else if ( 'c' == ca )
-                g_use40x24 = false;
-            else if ( '?' == ca )
-                usage();
-            else
-                usage( "invalid argument specified" );
-        }
-        else
-        {
-            if ( 0 == pcHEX )
-                pcHEX = parg;
-            else
-                usage( "too many arguments" );
-        }
-    }
-
-    tracer.Enable( trace, L"ntvao.log", true );
-    tracer.SetQuiet( true );
-    tracer.SetFlushEachTrace( true );
-    cpu.trace_instructions( traceInstructions );
-
-    if ( 0 == pcHEX && g_useHooks )
-        usage( "no command specified and hooks mean no Apple 1 monitor is installed" );
-
-    char acHex[ MAX_PATH ] = {0};
-    if ( 0 != pcHEX )
-    {
-        strcpy( acHex, pcHEX );
-
-        if ( !file_exists( acHex ) )
-        {
-            if ( ends_with( acHex, ".hex" ) )
-                usage( "can't find command file" );
             else
             {
-                strcat( acHex, ".hex" );
-
-                if ( !file_exists( acHex ) )
+                if ( 0 == pcHEX )
+                    pcHEX = parg;
+                else
+                    usage( "too many arguments" );
+            }
+        }
+    
+        tracer.Enable( trace, L"ntvao.log", true );
+        tracer.SetQuiet( true );
+        tracer.SetFlushEachTrace( true );
+        cpu.trace_instructions( traceInstructions );
+    
+        if ( 0 == pcHEX && g_useHooks )
+            usage( "no command specified and hooks mean no Apple 1 monitor is installed" );
+    
+        char acHex[ MAX_PATH ] = {0};
+        if ( 0 != pcHEX )
+        {
+            strcpy( acHex, pcHEX );
+    
+            if ( !file_exists( acHex ) )
+            {
+                if ( ends_with( acHex, ".hex" ) )
                     usage( "can't find command file" );
+                else
+                {
+                    strcat( acHex, ".hex" );
+    
+                    if ( !file_exists( acHex ) )
+                        usage( "can't find command file" );
+                }
             }
         }
-    }
-
-    memset( &cpu, 0, sizeof( cpu ) );
-    fill_random( memory, sizeof( memory ) ); // real hardware has random values
-
-    ConsoleConfiguration consoleConfig;
-    g_pConsoleConfiguration = &consoleConfig;
-    if ( g_use40x24 )
-        consoleConfig.EstablishConsoleOutput( 40, 24 );
+    
+        memset( &cpu, 0, sizeof( cpu ) );
+        fill_random( memory, sizeof( memory ) ); // real hardware has random values
+    
+        ConsoleConfiguration consoleConfig;
+        g_pConsoleConfiguration = &consoleConfig;
+        if ( g_use40x24 )
+            consoleConfig.EstablishConsoleOutput( 40, 24 );
 
 #ifdef WATCOM
-    uint32_t tStart = DosTimeInMS();
+        uint32_t tStart = DosTimeInMS();
 #else
-    high_resolution_clock::time_point tStart = high_resolution_clock::now();
+        high_resolution_clock::time_point tStart = high_resolution_clock::now();
 #endif
 
-    uint64_t total_cycles = invoke_command( ( 0 != acHex[ 0 ] ) ? acHex : 0, clockrate );
-
-    consoleConfig.RestoreConsole();
-
-    printf( "\n" );
-    if ( showPerformance )
-    {
-        char ac[ 100 ];
-#ifdef WATCOM
-        uint32_t elapsedMS = DosTimeInMS() - tStart;
-#else
-        high_resolution_clock::time_point tDone = high_resolution_clock::now();
-        uint32_t elapsedMS = (uint32_t) duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
-#endif
-        printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( elapsedMS, ac ) );
-        printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
-        printf( "clock rate: " );
-        if ( 0 == clockrate )
+        uint64_t total_cycles = invoke_command( ( 0 != acHex[ 0 ] ) ? acHex : 0, clockrate );
+    
+        consoleConfig.RestoreConsole();
+    
+        printf( "\n" );
+        if ( showPerformance )
         {
-            printf( "      %20s\n", "unbounded" );
-            uint64_t total_ms = total_cycles * 1000 / 1022727;
-            printf( "ms at 1.022727 Mhz: %18s == ", RenderNumberWithCommas( total_ms, ac ) );
-
-            uint16_t days = (uint16_t) ( total_ms / 1000 / 60 / 60 / 24 );
-            uint16_t hours = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 * 60 * 24 ) ) / 1000 / 60 / 60 );
-            uint16_t minutes = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 * 60 ) ) / 1000 / 60 );
-            uint16_t seconds = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 ) ) / 1000 );
-            uint64_t milliseconds = ( ( total_ms % 1000 ) );
-            printf( "%u days, %u hours, %u minutes, %u seconds, %llu milliseconds\n", days, hours, minutes, seconds, milliseconds );
+            char ac[ 100 ];
+#ifdef WATCOM
+            uint32_t elapsedMS = DosTimeInMS() - tStart;
+#else
+            high_resolution_clock::time_point tDone = high_resolution_clock::now();
+            uint32_t elapsedMS = (uint32_t) duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
+#endif
+            printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( elapsedMS, ac ) );
+            printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
+            printf( "clock rate: " );
+            if ( 0 == clockrate )
+            {
+                printf( "      %20s\n", "unbounded" );
+                uint64_t total_ms = total_cycles * 1000 / 1022727;
+                printf( "ms at 1.022727 Mhz: %18s == ", RenderNumberWithCommas( total_ms, ac ) );
+    
+                uint16_t days = (uint16_t) ( total_ms / 1000 / 60 / 60 / 24 );
+                uint16_t hours = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 * 60 * 24 ) ) / 1000 / 60 / 60 );
+                uint16_t minutes = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 * 60 ) ) / 1000 / 60 );
+                uint16_t seconds = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 ) ) / 1000 );
+                uint64_t milliseconds = ( ( total_ms % 1000 ) );
+                printf( "%u days, %u hours, %u minutes, %u seconds, %llu milliseconds\n", days, hours, minutes, seconds, milliseconds );
+            }
+            else
+                printf( "      %20s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
         }
-        else
-            printf( "      %20s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
+    }
+    catch ( bad_alloc & e )
+    {
+        printf( "caught exception bad_alloc -- out of RAM. If in RVOS use -h or -m to add RAM. %s\n", e.what() );
+    }
+    catch ( exception & e )
+    {
+        printf( "caught a standard execption: %s\n", e.what() );
+    }
+    catch( ... )
+    {
+        printf( "caught a generic exception\n" );
     }
 
     fflush( stdout );
