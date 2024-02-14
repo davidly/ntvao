@@ -29,17 +29,12 @@
 #include <assert.h>
 #include <chrono>
 #include <cstring>
-
 #include <ctype.h>
 
 #include <djl_os.hxx>
 #include <djltrace.hxx>
-
-#ifndef WATCOM
-#include <djl_cycle.hxx>
-#endif
-
 #include <djl_con.hxx>
+#include <djl_cycle.hxx>
 
 #include "mos6502.hxx"
 
@@ -61,7 +56,7 @@ static void usage( char const * perr = 0 )
     if ( perr )
         printf( "error: %s\n", perr );
 
-    printf( "NT Virtual Apple 1 Machine: emulates an Apple 1 on Windows and Linux\n" );
+    printf( "NT Virtual Apple 1 Machine: emulates an Apple 1 on Windows, MacOS, Linux, and DOS\n" );
     printf( "usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] [.hex file>]\n" );
     printf( "  arguments:\n" );
     printf( "     -a     address at which the run is started, e.g. /a:0x1000\n" );
@@ -368,7 +363,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
 void mos6502_apple1_store( uint16_t address )
 {
-    // only called just after a store of these addresses
+    // only called just after a store of this address
 
     if ( 0xd012 == address )
     {
@@ -747,9 +742,7 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
 
     g_executionEnded = false;
     uint64_t cycles_executed = 0;
-#ifndef WATCOM
     CPUCycleDelay delay( clockrate );
-#endif
     uint64_t cycles_since_last_kbd_peek = 0;
 
     do
@@ -765,17 +758,13 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         {
             // peeking the keyboard sleeps, throwing off execution times. Start again.
 
-#ifndef WATCOM
             delay.Reset();
-#endif
             cycles_since_last_kbd_peek = 0;
             g_KbdPeekHappened = false;
             continue;
         }
 
-#ifndef WATCOM
         delay.Delay( cycles_since_last_kbd_peek );
-#endif
     } while ( true );
 
     return cycles_executed;

@@ -243,13 +243,13 @@ void MOS_6502::op_math( uint8_t math, uint8_t rhs )
         math = 3; // adc
     }
 
-    if ( 0x0 == math ) // or
+    if ( 0 == math ) // or
         a |= rhs;
-    else if ( 0x1 == math ) // and
+    else if ( 1 == math ) // and
         a &= rhs;
-    else if ( 0x2 == math ) // eor
+    else if ( 2 == math ) // eor
         a ^= rhs;
-    else if ( 0x3 == math ) // adc
+    else if ( 3 == math ) // adc
     {
         uint16_t result16 = (uint16_t) a + (uint16_t) rhs + (uint16_t) ( fCarry ? 1 : 0 );
         uint8_t result = result16 & 0xff;
