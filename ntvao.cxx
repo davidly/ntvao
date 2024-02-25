@@ -790,33 +790,6 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
 
 #endif
 
-static void RenderNumber( long long n, char * ac )
-{
-    if ( n < 0 )
-    {
-        strcat( ac, "-" );
-        RenderNumber( -n, ac );
-        return;
-    }
-   
-    if ( n < 1000 )
-    {
-        sprintf( ac + strlen( ac ), "%lld", n );
-        return;
-    }
-
-    RenderNumber( n / 1000, ac );
-    sprintf( ac + strlen( ac ), ",%03lld", n % 1000 );
-    return;
-} //RenderNumber
-
-static char * RenderNumberWithCommas( long long n, char * ac )
-{
-    ac[ 0 ] = 0;
-    RenderNumber( n, ac );
-    return ac;
-} //RenderNumberWithCommas
-
 static int ends_with( const char * str, const char * end )
 {
     size_t len = strlen( str );
@@ -955,14 +928,14 @@ int main( int argc, char * argv[] )
             high_resolution_clock::time_point tDone = high_resolution_clock::now();
             uint32_t elapsedMS = (uint32_t) duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
 #endif
-            printf( "elapsed milliseconds: %16s\n", RenderNumberWithCommas( elapsedMS, ac ) );
-            printf( "6502 cycles: %25s\n", RenderNumberWithCommas( total_cycles, ac ) );
+            printf( "elapsed milliseconds: %16s\n", CDJLTrace::RenderNumberWithCommas( elapsedMS, ac ) );
+            printf( "6502 cycles: %25s\n", CDJLTrace::RenderNumberWithCommas( total_cycles, ac ) );
             printf( "clock rate: " );
             if ( 0 == clockrate )
             {
                 printf( "      %20s\n", "unbounded" );
                 uint64_t total_ms = total_cycles * 1000 / 1022727;
-                printf( "ms at 1.022727 Mhz: %18s == ", RenderNumberWithCommas( total_ms, ac ) );
+                printf( "ms at 1.022727 Mhz: %18s == ", CDJLTrace::RenderNumberWithCommas( total_ms, ac ) );
     
                 uint16_t days = (uint16_t) ( total_ms / 1000 / 60 / 60 / 24 );
                 uint16_t hours = (uint16_t) ( ( total_ms % ( (uint32_t) 1000 * 60 * 60 * 24 ) ) / 1000 / 60 / 60 );
@@ -972,7 +945,7 @@ int main( int argc, char * argv[] )
                 printf( "%u days, %u hours, %u minutes, %u seconds, %llu milliseconds\n", days, hours, minutes, seconds, milliseconds );
             }
             else
-                printf( "      %20s Hz\n", RenderNumberWithCommas( clockrate, ac ) );
+                printf( "      %20s Hz\n", CDJLTrace::RenderNumberWithCommas( clockrate, ac ) );
         }
     }
     catch ( bad_alloc & e )
