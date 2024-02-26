@@ -138,13 +138,6 @@ void mos6502_invoke_halt( void )
     g_executionEnded = true;
 } //mos6502_invoke_halt
 
-char printable( uint8_t x )
-{
-    if ( x < ' ' || x >= 127 )
-        return ' ';
-    return x;
-} //printable
-
 // this hook is invoked to emulate an Apple 1 if the Apple 1 monitor isn't installed
 
 uint8_t mos6502_invoke_hook( void )
