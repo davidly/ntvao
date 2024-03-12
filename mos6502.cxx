@@ -94,7 +94,8 @@ const char * MOS_6502::render_operation( uint16_t address )
     {
         uint8_t num = memory[ address + 1 ];
         strcpy( actemp, ac );
-        sprintf( actemp + ( pnum - ac - 1 ), "$%02x", (uint32_t) num );
+        size_t offset = ( pnum - ac - 1 );
+        snprintf( actemp + offset, _countof( actemp ) - offset, "$%02x", (uint32_t) num );
         strcat( actemp, pnum + 1 );
         strcpy( ac, actemp );
     }
@@ -102,7 +103,8 @@ const char * MOS_6502::render_operation( uint16_t address )
     {
         uint16_t num = mword( address + 1 );
         strcpy( actemp, ac );
-        sprintf( actemp + ( pnum - ac - 1 ), "$%04x", (uint32_t) num );
+        size_t offset = ( pnum - ac - 1 );
+        snprintf( actemp + offset, _countof( actemp ) - offset, "$%04x", (uint32_t) num );
         strcat( actemp, pnum + 2 );
         strcpy( ac, actemp );
     }
