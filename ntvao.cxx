@@ -10,7 +10,7 @@
 // To build on Windows debug or release using Mingw64 g++: (the code is >10% faster than Microsoft's compiler)
 //    g++ ntvao.cxx mos6502.cxx -I ../djl -D DEBUG -D _MSC_VER -D _GNU_WIN -Ofast -o ntvao.exe
 //    g++ ntvao.cxx mos6502.cxx -I ../djl -D NDEBUG -D _MSC_VER -D _GNU_WIN -Ofast -o ntvao.exe
-// To build on Windows targeting DOS, use the Watcom compiler. It's run pretty slowly.
+// To build on Windows targeting DOS, use the Watcom compiler. It'll run pretty slowly.
 //    wcl -ml -obmir -s -0 -xs -j -oe=128 -ol+ -ot ntvao.cxx mos6502.cxx -bcl=DOS /I. /DWATCOM /DNDEBUG
 //
 // Simulates the Apple 1 runtime environment enough to run simple apps.
