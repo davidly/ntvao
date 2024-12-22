@@ -44,9 +44,13 @@ static bool g_KbdPeekHappened = false;
 static bool g_forceUppercase = true; // the apple 1 way
 static uint16_t g_startAddress = 0xff00; // The monitor entrypoint
 static bool g_fStartAddressSpecified = false;
+static bool g_exitOnMonitor = false;
 static bool g_useHooks = false;
 static bool g_use40x24 = true;
 static ConsoleConfiguration * g_pConsoleConfiguration = 0;
+static FILE * g_loadFile = 0;
+static char kbd_char = 0;
+static bool kbd_available = false;
 
 static void usage( char const * perr = 0 )
 {
@@ -59,20 +63,22 @@ static void usage( char const * perr = 0 )
     printf( "NT Virtual Apple 1 Machine: emulates an Apple 1 on Windows, MacOS, Linux, and DOS\n" );
     printf( "usage: ntvao [-a] [-c] [-i] [-p] [-s:X] [-t] [-u] [.hex file>]\n" );
     printf( "  arguments:\n" );
-    printf( "     -a     address at which the run is started, e.g. /a:0x1000\n" );
-    printf( "            this overrides the default, which is 0xff00 or the first address in the input file.\n" );
+    printf( "   -a      address at which the run is started, e.g. /a:0x1000\n" );
+    printf( "           this overrides the default, which is 0xff00 or the first address in the input file.\n" );
 #ifdef _WIN32
-    printf( "     -c     don't set the console to 40x24. do exit ntvao when the Apple 1 app completes.\n" );
+    printf( "   -c      don't set the console to 40x24. implies -x.\n" );
 #else
-    printf( "     -c     Exit ntvao when the Apple 1 app completes.\n" );
+    printf( "   -c      synonym for -x.\n" );
 #endif
-    printf( "     -h     don't automatically install the Apple 1 monitor and BASIC; use hook emulation instead.\n" );
-    printf( "     -i     when tracing is enabled with -t, also show each instruction executed.\n" );
-    printf( "     -p     show performance information at app exit.\n" ); 
-    printf( "     -s:X   speed in Hz. Default is as fast as possible.\n" );
-    printf( "            for the Apple 1's speed use -s:1022727\n" );
-    printf( "     -t     enable debug tracing to ntvao.log\n" );
-    printf( "     -u     disable converting output chars to uppercase.\n" );
+    printf( "   -h      don't automatically install the Apple 1 monitor and BASIC; use hook emulation instead.\n" );
+    printf( "   -i      when tracing is enabled with -t, also show each instruction executed.\n" );
+    printf( "   -l:file loads file as keyboard input. e.g.: -l:estdin.bas\n" );
+    printf( "   -p      show performance information at app exit.\n" ); 
+    printf( "   -s:X    speed in Hz. Default is as fast as possible.\n" );
+    printf( "           for the Apple 1's speed use -s:1022727\n" );
+    printf( "   -t      enable debug tracing to ntvao.log\n" );
+    printf( "   -u      disable converting output chars to uppercase.\n" );
+    printf( "   -x      exit when control transfers to the monitor (when the app is done)\n" );
     printf( "  notes:\n" );
     printf( "     --     to assemble, load, and run test.s:\n" );
     printf( "                sbasm30306\\sbasm.py test.s\n" );
@@ -201,50 +207,39 @@ void mos6502_hard_exit( const char * perror, uint8_t val )
     exit( 1 );
 } //mos6502_hard_exit
 
-static vector<char> g_inputText;
-static uint32_t g_inputOffset = 0;
-
-void LoadInputFile()
+void load_input_file()
 {
+    char acfilename[ MAX_PATH ];
     printf( "filename to read: " );
     fflush( stdout );
-    char acfilename[ MAX_PATH ];
     char * result = g_pConsoleConfiguration->portable_gets_s( acfilename, _countof( acfilename ) );
     if ( result )
     {
-        tracer.Trace( "reading file %s to input stream\n", result );
-        FILE * fp = fopen( result, "r" );
-        if ( fp )
+        g_loadFile = fopen( result, "r" );
+        if ( !g_loadFile )
         {
-            uint32_t sizeSoFar = 0;
-            int prev = 0;
-            do
-            {
-                int next = fgetc( fp );
-                if ( EOF == next )
-                    break;
-
-                if ( 0xa == next ) // the Apple 1 uses 0x0d; Windows uses 0x0a.
-                    next = 0xd;
-
-                if ( 0xd == next && prev == 0xd )
-                    continue;
-
-                prev = next;
-                g_inputText.resize( sizeSoFar + 1 );
-                g_inputText[ sizeSoFar ] = (char) next;
-                sizeSoFar++;
-            } while( true );
-            
-            fclose( fp );
-        }
-        else
-        {
-            printf( "failed to open the file, error %d\n", errno );
+            printf( "failed to open the file\n" );
             fflush( stdout );
         }
     }
-} //LoadInputFile
+} //load_input_file
+
+char getc_load_file()
+{
+    char c = (char) fgetc( g_loadFile );
+    if ( 26 == c )            /* ^z eof on CP/M */
+        return EOF;
+    if ( 3 == c || 17 == c )  /* ^c or ^q */
+    {
+        g_executionEnded = true;
+        cpu.end_emulation();
+    }
+
+    if ( 0x0a == c )
+        c = 0x0d;
+
+    return c;
+} //getc_load_file
 
 uint8_t mos6502_apple1_load( uint16_t address )
 {
@@ -254,8 +249,21 @@ uint8_t mos6502_apple1_load( uint16_t address )
     {
         // KBDCR -- sets bit 7 when a key is available
 
-        if ( g_inputText.size() > 0 )
-            return 0x80; // a key is available
+        if ( g_loadFile )
+        {
+            char next = getc_load_file();
+            if ( EOF == next )
+            {
+                fclose( g_loadFile );
+                g_loadFile = 0;
+            }
+            else
+            {
+                kbd_char = (char) next;
+                kbd_available = true;
+                return 0x80;
+            }
+        }
 
         g_KbdPeekHappened = true;
 
@@ -288,8 +296,8 @@ uint8_t mos6502_apple1_load( uint16_t address )
                     CreateMemoryDump();
                 else if ( 12 == ch ) // 'l'
                 {
-                    LoadInputFile();
-                    if ( g_inputText.size() > 0 )
+                    load_input_file();
+                    if ( g_loadFile )
                         return 0x80;
                 }
                 else if ( 18 == ch ) // 'r'
@@ -306,9 +314,8 @@ uint8_t mos6502_apple1_load( uint16_t address )
             // put the character in the buffer to be read later
 
             tracer.Trace( "d011 kbdcr saving char for later %02x == '%c'\n", ch, printable( ch ) );
-            g_inputText.resize( 1 );
-            g_inputText[ 0 ] = ch;
-            g_inputOffset = 0;
+            kbd_char = ch;
+            kbd_available = true;
             return 0x80;    // a key is available
         }
         else
@@ -322,19 +329,13 @@ uint8_t mos6502_apple1_load( uint16_t address )
         // KBD -- returns an uppercase char if a key is available. It's up to the caller
         // to be certain one is ready using KBDCR. This function won't block.
 
-        if ( g_inputText.size() > 0 )
+        if ( kbd_available )
         {
-            char ch = g_inputText[ g_inputOffset++ ];
-            if ( g_inputOffset == g_inputText.size() )
-            {
-                g_inputOffset = 0;
-                g_inputText.resize( 0 );
-            }
-
-            ch = (char) toupper( ch ); // the Apple 1 expects only upppercase
-            tracer.Trace( "d010 kbd returning %02x == '%c' except with the high bit on\n", ch, printable( ch ) );
-            ch |= 0x80;                // the high bit should be set on the Apple 1
-            memory[ 0xd011 ] = 0;      // this should already be reset
+            kbd_available = false;
+            char ch = kbd_char;
+            ch = (char) toupper( ch );
+            ch |= 0x80;
+            memory[ 0xd011 ] = 0;
             return ch;
         }
 
@@ -729,7 +730,7 @@ uint64_t invoke_command( char const * pcFile, uint64_t clockrate )
         // if in monitor mode and using -c command-line mode, insert a HALT where apps
         // will jump when they're done executing.
 
-        if ( !g_use40x24 )
+        if ( g_exitOnMonitor || ( !g_use40x24 && !g_loadFile ) )
             memory[ 0xff1f ] = OPCODE_HALT;
     }
 
@@ -821,9 +822,9 @@ int main( int argc, char * argv[] )
 #endif
                )
             {
-                char ca = (char) tolower( parg[1] );
+                char lower = (char) tolower( parg[1] );
     
-                if ( 'a' == ca )
+                if ( 'a' == lower )
                 {
                     if ( ':' == parg[2] )
                     {
@@ -833,26 +834,37 @@ int main( int argc, char * argv[] )
                     else
                         usage( "colon required after a argument" );
                 }
-                else if ( 's' == ca )
+                else if ( 's' == lower )
                 {
                     if ( ':' == parg[2] )
                         clockrate = (uint64_t) strtoull( parg + 3 , 0, 10 );
                     else
                         usage( "colon required after c argument" );
                 }
-                else if ( 'h' == ca )
+                else if ( 'h' == lower )
                     g_useHooks = true;
-                else if ( 'i' == ca )
+                else if ( 'i' == lower )
                     traceInstructions = true;
-                else if ( 't' == ca )
+                else if ( 'l' == lower )
+                {
+                    g_loadFile = fopen( parg + 3, "r" );
+                    if ( !g_loadFile )
+                    {
+                        printf( "unable to open load file specified in '%s'\n", parg );
+                        usage( "invalid command" );
+                    }
+                }
+                else if ( 't' == lower )
                     trace = true;
-                else if ( 'u' == ca )
+                else if ( 'u' == lower )
                     g_forceUppercase = false;
-                else if ( 'p' == ca )
+                else if ( 'p' == lower )
                     showPerformance = true;
-                else if ( 'c' == ca )
+                else if ( 'c' == lower )
                     g_use40x24 = false;
-                else if ( '?' == ca )
+                else if ( 'x' == lower )
+                    g_exitOnMonitor = true;
+                else if ( '?' == lower )
                     usage();
                 else
                     usage( "invalid argument specified" );
