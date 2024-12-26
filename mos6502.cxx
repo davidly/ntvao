@@ -319,9 +319,9 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
         {
             case 0x00: // brk
             {
-                uint16_t returnAddress = pc + 2; // brk is a 00 + one padding/intent byte; return past the padding
-                push( returnAddress >> 8 );
-                push( returnAddress & 0xff );
+                uint16_t address = pc + 2; // brk is a 00 + one padding/intent byte; return past the padding
+                push( address >> 8 );
+                push( address & 0xff );
                 op_php(); // push with old state of interrupt flag
                 fInterruptDisable = true;
                 pc = mword( 0xfffe ); // jump to the IRQ software interrupt vector
@@ -434,11 +434,10 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
             case 0x18: { fCarry = false; break; } // clc
             case 0x20: // jsr a16
             {
-                uint16_t address = mword( pc + 1 );
-                uint16_t returnAddress = pc + 2;  // it's really +3, but this is how the 6502 works
-                push( returnAddress >> 8 );
-                push( returnAddress & 0xff );
-                pc = address;
+                uint16_t address = pc + 2;  // it's really +3, but this is how the 6502 works
+                push( address >> 8 );
+                push( address & 0xff );
+                pc = mword( pc + 1 );
                 continue;
             }
             case 0x24: { op_bit( memory[ memory[ pc + 1 ] ] ); break; } // bit a8   NZV
@@ -506,9 +505,8 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
             case 0xa0: case 0xa1: case 0xa2: case 0xa4: case 0xa5: case 0xa6: case 0xa9: case 0xac: case 0xad: case 0xae: // lda, ldx, ldy
             case 0xb1: case 0xb4: case 0xb5: case 0xb6: case 0xb9: case 0xbc: case 0xbd: case 0xbe: 
             {
-                uint8_t lo = ( op & 0x0f );
                 uint16_t address;
-                if ( ( 0xa0 == ( op & 0xf0 ) ) && ( 0 == lo || 2 == lo || 9 == lo ) ) // #d8
+                if ( 0xa0 == op || 0xa2 == op || 0xa9 == op )              // #d8
                     address = pc + 1;                          
                 else if ( op == 0xa1 )                                     // (a8,x)
                     address = mword( 0xff & ( memory[ pc + 1 ] + x ) );    // wrap
@@ -555,13 +553,18 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
             case 0xc6: case 0xce: case 0xd6: case 0xde: case 0xe6: case 0xee: case 0xf6: case 0xfe:  // inc and dec memory
             {
                 uint16_t address;
-                if ( 6 == ( op & 0xf ) )
-                    address = memory[ pc + 1 ];
-                else
+                if ( op & 8 )
+                {
                     address = mword( pc + 1 );
-        
-                if ( op & 0x10 )
-                    address += x;
+                    if ( op & 0x10 )
+                        address += x;
+                }
+                else
+                {
+                    address = memory[ pc + 1 ];
+                    if ( op & 0x10 )
+                        address = (uint8_t) ( address + x );       // wrap     
+                }
         
                 if ( op >= 0xe6 )
                     memory[ address ]++;
