@@ -367,7 +367,7 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                     else                                                // #d8
                         val = memory[ pc + 1 ];                         
                 }
-                else if ( 0xd == lo )
+                else /* if ( 0xd == lo ) */
                 {
                     uint16_t address = mword( pc + 1 );                 // a16
                     if ( op & 0x10 )                                    // a16,x
@@ -378,8 +378,6 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                     }
                     val = memory[ address ];
                 }
-                else
-                    mos6502_hard_exit( "mos6502 unsupported comparison instruction %02x\n", op );
         
                 op_math( ( op >> 5 ), val );
                 break;
@@ -387,23 +385,20 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
             case 0x06: case 0x16: case 0x26: case 0x36: case 0x46: case 0x56: case 0x66: case 0x76: // rotate memory
             case 0x0e: case 0x1e: case 0x2e: case 0x3e: case 0x4e: case 0x5e: case 0x6e: case 0x7e:
             {
-                uint8_t lo = ( op & 0x0f );
                 uint16_t address;
-                if ( 0x06 == lo )
-                {
-                    address = memory[ pc + 1 ];                // a8
-                    if ( op & 0x10 )
-                        address += (uint16_t) x;               // a8,x
-                }
-                else if ( 0x0e == lo )
+                if ( 8 & op )
                 {
                     address = mword( pc + 1 );                 // a16
                     if ( op & 0x10 )
                         address += (uint16_t) x;               // a16,x   crossing page boundry is free
                 }
                 else
-                    mos6502_hard_exit("mos6502 unsupported rotate instruction %02x\n", op );
-        
+                {
+                    address = memory[ pc + 1 ];                // a8
+                    if ( op & 0x10 )
+                        address = (uint8_t) ( address + x );   // a8,x   wrap
+                }
+
                 uint8_t rotate = op >> 5;
                 memory[ address ] = op_rotate( rotate, memory[ address ] );
                 break;
@@ -495,10 +490,8 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                     address = mword( pc + 1 ) + y;             
                 else if ( op >= 0x8c && op <= 0x8e )           // a16
                     address = mword( pc + 1 );                 
-                else if ( 0x9d == op )                         // a16,x
+                else /* if ( 0x9d == op ) */                   // a16,x
                     address = mword( pc + 1 ) + x;             
-                else
-                    mos6502_hard_exit( "mos6502 unsupported store instruction %02x\n", op );
     
                 memory[ address ] = tostore;
                 
@@ -536,10 +529,8 @@ uint64_t MOS_6502::emulate( uint64_t maxcycles )
                     address = mword( pc + 1 );                 
                 else if ( 0xbc == op || 0xbd == op )               // a16,x
                     address = mword( pc + 1 ) + x;             
-                else if ( 0xb9 == op || 0xbe == op )               // a16,y
+                else /* if ( 0xb9 == op || 0xbe == op ) */         // a16,y
                     address = mword( pc + 1 ) + y;             
-                else
-                    mos6502_hard_exit( "mos6502 unsupported load instruction opcode %02x\n", op );
                 
                 if ( address >= 0xd010 && address <= 0xd012 ) // minimal Apple 1 emulation support
                     memory[ address ] = mos6502_apple1_load( address );
