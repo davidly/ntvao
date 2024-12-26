@@ -56,6 +56,8 @@ file descriptions:
     hello.s:          simple hello world test app
     hello.hex:        code for hello.s
 
+I ported NTVAO to C and CP/M 2.2 for 8080 and Z80 here: [Apple 1](https://github.com/davidly/a1)
+
 notes:
     
     I wrote this so I could test the output of my BA BASIC compiler (in my TTT repo) in an automated
@@ -79,6 +81,7 @@ notes:
     Built and tested on Windows on x86, AMD64, and Arm64. Also Linux on Arm32, Arm64, and AMD64. Also on MacOS on an M1.
     
     The name is from ntvdm -- the Windows NT Virtual DOS Machine.
+
 
     The -p switch shows runtime information. In this example, the app took 21 seconds to run, 
     but on a real Apple 1 it would have taken three and a half hours.
