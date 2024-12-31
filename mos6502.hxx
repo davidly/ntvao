@@ -10,7 +10,7 @@ struct MOS_6502
 {
     // emulator API
 
-    uint64_t emulate( uint64_t maxcycles );             // execute up to about maxcycles
+    uint64_t emulate( uint16_t maxcycles );             // execute up to about maxcycles
     void trace_instructions( bool trace );              // enable/disable tracing each instruction
     void trace_state( void );                           // trace the registers
     const char * render_operation( uint16_t address );  // return a string with the disassembled instruction at address

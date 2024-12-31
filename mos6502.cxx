@@ -17,7 +17,7 @@
 #include <djltrace.hxx>
 #include "mos6502.hxx"
 
-static uint32_t g_State = 0;
+static uint8_t g_State = 0;
 
 #define stateTraceInstructions 1
 #define stateEndEmulation 2
@@ -155,8 +155,7 @@ uint8_t MOS_6502::op_rotate( uint8_t op, uint8_t val )
 
 void MOS_6502::op_cmp( uint8_t lhs, uint8_t rhs )
 {
-    uint16_t result = (uint16_t) lhs - (uint16_t) rhs;
-    set_nz( (uint8_t) result );
+    set_nz( (uint8_t) ( (uint16_t) lhs - (uint16_t) rhs ) );
     fCarry = ( lhs >= rhs );
 } //op_cmp
 
@@ -283,11 +282,11 @@ void MOS_6502::op_php()
     push( pf );
 } //op_php
 
-uint64_t MOS_6502::emulate( uint64_t maxcycles )
+uint64_t MOS_6502::emulate( uint16_t maxcycles )
 {
     uint8_t val, *pb;
     uint16_t address;
-    uint64_t cycles = 0;
+    uint16_t cycles = 0;
 
     while ( cycles < maxcycles ) 
     {
@@ -427,14 +426,14 @@ _op_rts:
             case 0x6a: case 0x4a: case 0x2a: case 0x0a: { a = op_rotate( op, a ); break; } // asl, rol, lsr, ror
             case 0x6c: { pc = get_word( get_word( pc + 1 ) ); continue; } // jmp (a16)
             case 0x78: { fInterruptDisable = true; break; } // sei
-            case 0x81: { address = get_word( 0xff & ( get_byte( cpu.pc + 1 ) + cpu.x ) ); goto _st_complete; } /* stx (a8, x) */
-            case 0x84: case 0x85: case 0x86: { address = get_byte( cpu.pc + 1 ); goto _st_complete; }          /* sty/sta/stx a8 */
-            case 0x8c: case 0x8d: case 0x8e: { address = get_word( cpu.pc + 1 ); goto _st_complete; }          /* sty/sta/stx a16 */
-            case 0x91: { address = cpu.y + get_word( get_byte( cpu.pc + 1 ) ); goto _st_complete; }            /* sta (a8), y */
-            case 0x94: case 0x95: { address = 0xff & ( get_byte( cpu.pc + 1 ) + cpu.x ); goto _st_complete; }  /* sta/sty a8, x */
-            case 0x96: { address = 0xff & ( get_byte( cpu.pc + 1 ) + cpu.y ); goto _st_complete; }             /* stx a8, y */
-            case 0x99: { address = get_word( cpu.pc + 1 ) + cpu.y; goto _st_complete; }                        /* sta a16, y */
-            case 0x9d:                                                                                         /* sta a16, x */
+            case 0x81: { address = get_word( (uint8_t) ( get_byte( cpu.pc + 1 ) + cpu.x ) ); goto _st_complete; } /* stx (a8, x) */
+            case 0x84: case 0x85: case 0x86: { address = get_byte( cpu.pc + 1 ); goto _st_complete; }             /* sty/sta/stx a8 */
+            case 0x8c: case 0x8d: case 0x8e: { address = get_word( cpu.pc + 1 ); goto _st_complete; }             /* sty/sta/stx a16 */
+            case 0x91: { address = cpu.y + get_word( get_byte( cpu.pc + 1 ) ); goto _st_complete; }               /* sta (a8), y */
+            case 0x94: case 0x95: { address = (uint8_t) ( get_byte( cpu.pc + 1 ) + cpu.x ); goto _st_complete; }  /* sta/sty a8, x */
+            case 0x96: { address = (uint8_t) ( get_byte( cpu.pc + 1 ) + cpu.y ); goto _st_complete; }             /* stx a8, y */
+            case 0x99: { address = get_word( cpu.pc + 1 ) + cpu.y; goto _st_complete; }                           /* sta a16, y */
+            case 0x9d:                                                                                            /* sta a16, x */
             {
                 address = get_word( cpu.pc + 1 ) + cpu.x;
 _st_complete:
@@ -447,15 +446,15 @@ _st_complete:
             case 0x8a: { a = x; set_nz( a ); break; } // txa
             case 0x98: { a = y; set_nz( a ); break; } // tya
             case 0x9a: { sp = x; break; } // txs no flags set
-            case 0xa0: case 0xa2: case 0xa9: { address = cpu.pc + 1; goto _ld_complete; }                      /* ldy/ldx/lda #d8 */
-            case 0xa1: { address = get_word( 0xff & ( get_byte( cpu.pc + 1 ) + cpu.x ) ); goto _ld_complete; } /* lda (a8, x ) */
-            case 0xa4 : case 0xa5: case  0xa6: { address = get_byte( cpu.pc + 1 ); goto _ld0_complete; }       /* ldy/lda/ldx a8 */
-            case 0xac: case 0xad: case 0xae:{ address = get_word( cpu.pc + 1 ); goto _ld_complete; }           /* ldy/lda/ldx a16 */
-            case 0xb1: { address = cpu.y + get_word( (uint16_t) get_byte( cpu.pc + 1 ) ); goto _ld_complete; } /* lda (a8), y */
-            case 0xb4: case 0xb5: { address = 0xff & ( get_byte( cpu.pc + 1 ) + cpu.x ); goto _ld0_complete; } /* ldy/lda a8, x */
-            case 0xb6: { address = 0xff & ( get_byte( cpu.pc + 1 ) + cpu.y ); goto _ld0_complete; }            /* ldx a8, y */
-            case 0xb9 : case 0xbe: { address = get_word( cpu.pc + 1 ) + cpu.y; goto _ld_complete; }            /* lda/ldx a16, y */
-            case 0xbc: case 0xbd:                                                                              /* ldy/lda a16, x */
+            case 0xa0: case 0xa2: case 0xa9: { address = cpu.pc + 1; goto _ld_complete; }                         /* ldy/ldx/lda #d8 */
+            case 0xa1: { address = get_word( (uint8_t) ( get_byte( cpu.pc + 1 ) + cpu.x ) ); goto _ld_complete; } /* lda (a8, x ) */
+            case 0xa4 : case 0xa5: case  0xa6: { address = get_byte( cpu.pc + 1 ); goto _ld0_complete; }          /* ldy/lda/ldx a8 */
+            case 0xac: case 0xad: case 0xae:{ address = get_word( cpu.pc + 1 ); goto _ld_complete; }              /* ldy/lda/ldx a16 */
+            case 0xb1: { address = cpu.y + get_word( (uint16_t) get_byte( cpu.pc + 1 ) ); goto _ld_complete; }    /* lda (a8), y */
+            case 0xb4: case 0xb5: { address = (uint8_t) ( get_byte( cpu.pc + 1 ) + cpu.x ); goto _ld0_complete; } /* ldy/lda a8, x */
+            case 0xb6: { address = (uint8_t) ( get_byte( cpu.pc + 1 ) + cpu.y ); goto _ld0_complete; }            /* ldx a8, y */
+            case 0xb9 : case 0xbe: { address = get_word( cpu.pc + 1 ) + cpu.y; goto _ld_complete; }               /* lda/ldx a16, y */
+            case 0xbc: case 0xbd:                                                                                 /* ldy/lda a16, x */
             {
                 address = get_word( cpu.pc + 1 ) + cpu.x;             
 _ld_complete:   /* load */
@@ -481,7 +480,7 @@ _ld0_complete:  /* load from page 0 */
             case 0xc4: { op_cmp( y, memory[ memory[ pc + 1 ] ] ); break; } // cpy a8
             case 0xc6 : case 0xe6: { address = get_byte( cpu.pc + 1 ); goto _crement_complete; }         /* inc/dec a8 */
             case 0xce : case 0xee: { address = get_word( cpu.pc + 1 ); goto _crement_complete; }         /* inc/dec a16 */
-            case 0xd6 : case 0xf6: { address = cpu.x + get_byte( cpu.pc + 1 ); goto _crement_complete; } /* inc/dec a8, x */
+            case 0xd6 : case 0xf6: { address = (uint8_t) ( cpu.x + get_byte( cpu.pc + 1 ) ); goto _crement_complete; } /* inc/dec a8, x */
             case 0xde : case 0xfe:                                                                       /* inc/dec a16, x */
             {
                 address = cpu.x + get_word( cpu.pc + 1 );
