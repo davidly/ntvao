@@ -41,41 +41,45 @@ struct Instruction
 
 static const Instruction ins_6502[ 256 ] =
 {
-    /*00*/ 2,7,"brk",     2,6,"ora (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"ora a8",    2,5,"asl a8",    0,0,"", 
-    /*08*/ 1,3,"php",     2,2,"ora #d8",    1,2,"asl a",   0,0,"", 0,0,"",          3,4,"ora a16",   3,6,"asl a16",   1,1,"(hook)", 
-    /*10*/ 2,3,"bpl r8",  2,5,"ora (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"ora a8,x",  2,6,"asl a8,x",  0,0,"", 
-    /*18*/ 1,2,"clc",     3,4,"ora a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"ora a16,x", 3,7,"asl a16,x", 0,0,"", 
-    /*20*/ 3,6,"jsr a16", 2,6,"and (a8,x)", 0,0,"",        0,0,"", 2,3,"bit a8",    2,3,"and a8",    2,5,"rol a8",    0,0,"", 
-    /*28*/ 1,4,"plp",     2,2,"and #d8",    1,2,"rol a",   0,0,"", 3,4,"bit a16",   3,4,"and a16",   3,6,"rol a16",   0,0,"", 
-    /*30*/ 2,3,"bmi r8",  2,5,"and (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"and a8,x",  2,6,"rol a8,x",  0,0,"", 
-    /*38*/ 1,2,"sec",     3,4,"and a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"and a16,x", 3,7,"rol a16,x", 0,0,"", 
-    /*40*/ 1,6,"rti",     2,6,"eor (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"eor a8",    2,5,"lsr a8",    0,0,"", 
-    /*48*/ 1,3,"pha",     2,2,"eor #d8",    1,2,"lsr a",   0,0,"", 3,3,"jmp a16",   3,4,"eor a16",   3,6,"lsr a16",   0,0,"", 
-    /*50*/ 2,3,"bvc r8",  2,5,"eor (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"eor a8,x",  2,6,"lsr a8,x",  0,0,"", 
-    /*58*/ 1,2,"cli",     3,4,"eor a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"eor a16,x", 3,7,"lsr a16,x", 0,0,"", 
-    /*60*/ 1,6,"rts",     2,6,"adc (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"adc a8",    2,5,"ror a8",    0,0,"", 
-    /*68*/ 1,4,"pla",     2,2,"adc #d8",    1,2,"ror a",   0,0,"", 3,5,"jmp (a16)", 3,4,"adc a16",   3,6,"ror a16",   0,0,"", 
-    /*70*/ 2,3,"bvs r8",  2,5,"adc (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"adc a8,x",  2,6,"ror a8,x",  0,0,"", 
-    /*78*/ 1,2,"sei",     3,4,"adc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"adc a16,x", 3,7,"ror a16,x", 0,0,"", 
-    /*80*/ 0,0,"",        2,6,"sta (a8,x)", 0,0,"",        0,0,"", 2,3,"sty a8",    2,3,"sta a8",    2,3,"stx a8",    0,0,"", 
-    /*88*/ 1,2,"dey",     0,0,"",           1,2,"txa",     0,0,"", 3,4,"sty a16",   3,4,"sta a16",   3,4,"stx a16",   0,0,"", 
-    /*90*/ 2,3,"bcc r8",  2,6,"sta (a8),y", 0,0,"",        0,0,"", 2,4,"sty a8,x",  2,4,"sta a8,x",  2,4,"stx a8,y",  0,0,"", 
-    /*98*/ 1,2,"tya",     3,5,"sta a16,y",  1,2,"txs",     0,0,"", 0,0,"",          3,5,"sta a16,x", 0,0,"",          0,0,"", 
-    /*a0*/ 2,2,"ldy #d8", 2,6,"lda (a8,x)", 2,2,"ldx #d8", 0,0,"", 2,3,"ldy a8",    2,3,"lda a8",    2,3,"ldx a8",    0,0,"", 
-    /*a8*/ 1,2,"tay",     2,2,"lda #d8",    1,2,"tax",     0,0,"", 3,4,"ldy a16",   3,4,"lda a16",   3,4,"ldx a16",   0,0,"", 
-    /*b0*/ 2,3,"bcs r8",  2,5,"lda (a8),y", 0,0,"",        0,0,"", 2,4,"ldy a8,x",  2,4,"lda a8,x",  2,4,"ldx a8,y",  0,0,"", 
-    /*b8*/ 1,2,"clv",     3,4,"lda a16,y",  1,2,"tsx",     0,0,"", 3,4,"ldy a16,x", 3,4,"lda a16,x", 3,4,"ldx a16,y", 0,0,"", 
-    /*c0*/ 2,2,"cpy #d8", 2,6,"cmp (a8,x)", 0,0,"",        0,0,"", 2,3,"cpy a8",    2,3,"cmp a8",    2,5,"dec a8",    0,0,"", 
-    /*c8*/ 1,2,"iny",     2,2,"cmp #d8",    1,2,"dex",     0,0,"", 3,4,"cpy a16",   3,4,"cmp a16",   3,6,"dec a16",   0,0,"", 
-    /*d0*/ 2,3,"bne r8",  2,5,"cmp (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"cmp a8,x",  2,6,"dec a8,x",  0,0,"", 
-    /*d8*/ 1,2,"cld",     3,4,"cmp a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"cmp a16,x", 3,7,"dec a16,x", 0,0,"", 
-    /*e0*/ 2,2,"cpx #d8", 2,6,"sbc (a8,x)", 0,0,"",        0,0,"", 2,3,"cpx a8",    2,3,"sbc a8",    2,5,"inc a8",    0,0,"", 
+    /*00*/ 2,7,"brk",     2,6,"ora (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"ora a8",    2,5,"asl a8",    0,0,"",
+    /*08*/ 1,3,"php",     2,2,"ora #d8",    1,2,"asl a",   0,0,"", 0,0,"",          3,4,"ora a16",   3,6,"asl a16",   1,1,"(hook)",
+    /*10*/ 2,3,"bpl r8",  2,5,"ora (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"ora a8,x",  2,6,"asl a8,x",  0,0,"",
+    /*18*/ 1,2,"clc",     3,4,"ora a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"ora a16,x", 3,7,"asl a16,x", 0,0,"",
+    /*20*/ 3,6,"jsr a16", 2,6,"and (a8,x)", 0,0,"",        0,0,"", 2,3,"bit a8",    2,3,"and a8",    2,5,"rol a8",    0,0,"",
+    /*28*/ 1,4,"plp",     2,2,"and #d8",    1,2,"rol a",   0,0,"", 3,4,"bit a16",   3,4,"and a16",   3,6,"rol a16",   0,0,"",
+    /*30*/ 2,3,"bmi r8",  2,5,"and (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"and a8,x",  2,6,"rol a8,x",  0,0,"",
+    /*38*/ 1,2,"sec",     3,4,"and a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"and a16,x", 3,7,"rol a16,x", 0,0,"",
+    /*40*/ 1,6,"rti",     2,6,"eor (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"eor a8",    2,5,"lsr a8",    0,0,"",
+    /*48*/ 1,3,"pha",     2,2,"eor #d8",    1,2,"lsr a",   0,0,"", 3,3,"jmp a16",   3,4,"eor a16",   3,6,"lsr a16",   0,0,"",
+    /*50*/ 2,3,"bvc r8",  2,5,"eor (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"eor a8,x",  2,6,"lsr a8,x",  0,0,"",
+    /*58*/ 1,2,"cli",     3,4,"eor a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"eor a16,x", 3,7,"lsr a16,x", 0,0,"",
+    /*60*/ 1,6,"rts",     2,6,"adc (a8,x)", 0,0,"",        0,0,"", 0,0,"",          2,3,"adc a8",    2,5,"ror a8",    0,0,"",
+    /*68*/ 1,4,"pla",     2,2,"adc #d8",    1,2,"ror a",   0,0,"", 3,5,"jmp (a16)", 3,4,"adc a16",   3,6,"ror a16",   0,0,"",
+    /*70*/ 2,3,"bvs r8",  2,5,"adc (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"adc a8,x",  2,6,"ror a8,x",  0,0,"",
+    /*78*/ 1,2,"sei",     3,4,"adc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"adc a16,x", 3,7,"ror a16,x", 0,0,"",
+    /*80*/ 0,0,"",        2,6,"sta (a8,x)", 0,0,"",        0,0,"", 2,3,"sty a8",    2,3,"sta a8",    2,3,"stx a8",    0,0,"",
+    /*88*/ 1,2,"dey",     0,0,"",           1,2,"txa",     0,0,"", 3,4,"sty a16",   3,4,"sta a16",   3,4,"stx a16",   0,0,"",
+    /*90*/ 2,3,"bcc r8",  2,6,"sta (a8),y", 0,0,"",        0,0,"", 2,4,"sty a8,x",  2,4,"sta a8,x",  2,4,"stx a8,y",  0,0,"",
+    /*98*/ 1,2,"tya",     3,5,"sta a16,y",  1,2,"txs",     0,0,"", 0,0,"",          3,5,"sta a16,x", 0,0,"",          0,0,"",
+    /*a0*/ 2,2,"ldy #d8", 2,6,"lda (a8,x)", 2,2,"ldx #d8", 0,0,"", 2,3,"ldy a8",    2,3,"lda a8",    2,3,"ldx a8",    0,0,"",
+    /*a8*/ 1,2,"tay",     2,2,"lda #d8",    1,2,"tax",     0,0,"", 3,4,"ldy a16",   3,4,"lda a16",   3,4,"ldx a16",   0,0,"",
+    /*b0*/ 2,3,"bcs r8",  2,5,"lda (a8),y", 0,0,"",        0,0,"", 2,4,"ldy a8,x",  2,4,"lda a8,x",  2,4,"ldx a8,y",  0,0,"",
+    /*b8*/ 1,2,"clv",     3,4,"lda a16,y",  1,2,"tsx",     0,0,"", 3,4,"ldy a16,x", 3,4,"lda a16,x", 3,4,"ldx a16,y", 0,0,"",
+    /*c0*/ 2,2,"cpy #d8", 2,6,"cmp (a8,x)", 0,0,"",        0,0,"", 2,3,"cpy a8",    2,3,"cmp a8",    2,5,"dec a8",    0,0,"",
+    /*c8*/ 1,2,"iny",     2,2,"cmp #d8",    1,2,"dex",     0,0,"", 3,4,"cpy a16",   3,4,"cmp a16",   3,6,"dec a16",   0,0,"",
+    /*d0*/ 2,3,"bne r8",  2,5,"cmp (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"cmp a8,x",  2,6,"dec a8,x",  0,0,"",
+    /*d8*/ 1,2,"cld",     3,4,"cmp a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"cmp a16,x", 3,7,"dec a16,x", 0,0,"",
+    /*e0*/ 2,2,"cpx #d8", 2,6,"sbc (a8,x)", 0,0,"",        0,0,"", 2,3,"cpx a8",    2,3,"sbc a8",    2,5,"inc a8",    0,0,"",
     /*e8*/ 1,2,"inx",     2,2,"sbc #d8",    1,2,"nop",     0,0,"", 3,4,"cpx a16",   3,4,"sbc a16",   3,6,"inc a16",   0,0,"",
-    /*f0*/ 2,3,"beq r8",  2,5,"sbc (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"sbc a8,x",  2,6,"inc a8,x",  0,0,"", 
-    /*f8*/ 1,2,"sed",     3,4,"sbc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"sbc a16,x", 3,7,"inc a16,x", 1,1,"(halt)", 
+    /*f0*/ 2,3,"beq r8",  2,5,"sbc (a8),y", 0,0,"",        0,0,"", 0,0,"",          2,4,"sbc a8,x",  2,6,"inc a8,x",  0,0,"",
+    /*f8*/ 1,2,"sed",     3,4,"sbc a16,y",  0,0,"",        0,0,"", 0,0,"",          3,4,"sbc a16,x", 3,7,"inc a16,x", 1,1,"(halt)",
 };
 
-static uint16_t get_word( uint16_t offset ) { return * ( (uint16_t * ) & memory[ offset ] ); }
+#ifdef TARGET_BIG_ENDIAN
+static uint16_t get_word( uint16_t offset ) { return (uint16_t) memory[ offset ] | ( (uint16_t) memory[ offset + 1 ] << 8 ); } // do this in an endian-free way
+#else
+static uint16_t get_word( uint16_t offset ) { return * ( (uint16_t * ) & memory[ offset ] ); } // faster than big-endian way
+#endif
 #define get_byte( a ) memory[ a ]
 #define set_byte( a, v ) memory[ a ] = v
 static uint8_t * get_mem( uint16_t a ) { return & memory[ a ]; }
@@ -266,7 +270,7 @@ void MOS_6502::op_pop_pf()
     fDecimal = ( 0 != ( pf & 0x08 ) );
     fInterruptDisable = ( 0 != ( pf & 0x04 ) );
     fZero = ( 0 != ( pf & 0x02 ) );
-    fCarry = ( 0 != ( pf & 0x01 ) ); 
+    fCarry = ( 0 != ( pf & 0x01 ) );
 } // op_pop_pf
 
 void MOS_6502::op_php()
@@ -288,7 +292,7 @@ uint64_t MOS_6502::emulate( uint16_t maxcycles )
     uint16_t address;
     uint16_t cycles = 0;
 
-    while ( cycles < maxcycles ) 
+    while ( cycles < maxcycles )
     {
         if ( 0 != g_State )   // grouped into one check rather than 3 every loop
         {
@@ -339,7 +343,7 @@ uint64_t MOS_6502::emulate( uint16_t maxcycles )
                 op_math( op, get_byte( get_byte( cpu.pc + 1 ) ) );
                 break;
             }
-            case 0x15: case 0x35: case 0x55: case 0x75: case 0xd5: case 0xf5: /* ora/and/eor/adc/cmp/sbc a8, x */  
+            case 0x15: case 0x35: case 0x55: case 0x75: case 0xd5: case 0xf5: /* ora/and/eor/adc/cmp/sbc a8, x */
             {
                 op_math( op, get_byte( cpu.x + get_byte( cpu.pc + 1 ) ) );
                 break;
@@ -387,7 +391,7 @@ _rot_complete:
             case 0xf0:                                                                 /* beq */
             {
                 if ( !cpu.fZero )
-                    break;                                               
+                    break;
 _branch:
                 cpu.pc += ( 2 + (int16_t) (int8_t) get_byte( cpu.pc + 1 ) );
                 continue;
@@ -456,14 +460,14 @@ _st_complete:
             case 0xb9 : case 0xbe: { address = get_word( cpu.pc + 1 ) + cpu.y; goto _ld_complete; }               /* lda/ldx a16, y */
             case 0xbc: case 0xbd:                                                                                 /* ldy/lda a16, x */
             {
-                address = get_word( cpu.pc + 1 ) + cpu.x;             
+                address = get_word( cpu.pc + 1 ) + cpu.x;
 _ld_complete:   /* load */
                 if ( address >= 0xd010 && address <= 0xd012 )                          /* apple 1 memory-mapped I/O */
                     set_byte( address, mos6502_apple1_load( address ) );
 _ld0_complete:  /* load from page 0 */
                 val = get_byte( address );
                 set_nz( val );
-        
+
                 if ( op & 1 )
                     cpu.a = val;
                 else if ( op & 2 )
