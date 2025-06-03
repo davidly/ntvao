@@ -224,9 +224,9 @@ void load_input_file()
     }
 } //load_input_file
 
-char getc_load_file()
+int getc_load_file()
 {
-    char c = (char) fgetc( g_loadFile );
+    int c = fgetc( g_loadFile );
     if ( 26 == c )            /* ^z eof on CP/M */
         return EOF;
     if ( 3 == c || 17 == c )  /* ^c or ^q */
@@ -251,7 +251,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
 
         if ( g_loadFile )
         {
-            char next = getc_load_file();
+            int next = getc_load_file();
             if ( EOF == next )
             {
                 fclose( g_loadFile );
