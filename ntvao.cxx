@@ -920,6 +920,8 @@ int main( int argc, char * argv[] )
         if ( g_use40x24 )
             consoleConfig.EstablishConsoleOutput( 40, 24 );
 
+        ConsoleConfiguration::ConvertRedirectedLFToCR( true );
+
 #ifdef WATCOM
         uint32_t tStart = DosTimeInMS();
 #else
