@@ -306,7 +306,7 @@ uint8_t mos6502_apple1_load( uint16_t address )
                 return 0; // no key is available for the emulated app -- control codes are for the host
             }
 
-            // translate backspace to what the Apple 1 wants -- an undercore, which virtually backspaces
+            // translate backspace to what the Apple 1 wants -- an underscore, which virtually backspaces
 
             if ( 0x08 == ch || 0x7f == ch )
                 ch = 0x5f;
