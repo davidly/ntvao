@@ -11,7 +11,7 @@
 //    g++ ntvao.cxx mos6502.cxx -I ../djl -D DEBUG -D _MSC_VER -D _GNU_WIN -Ofast -o ntvao.exe
 //    g++ ntvao.cxx mos6502.cxx -I ../djl -D NDEBUG -D _MSC_VER -D _GNU_WIN -Ofast -o ntvao.exe
 // To build on Windows targeting DOS, use the Watcom compiler. It'll run pretty slowly.
-//    wcl -ml -obmir -s -0 -xs -j -oe=128 -ol+ -ot ntvao.cxx mos6502.cxx -bcl=DOS /I. /DWATCOM /DNDEBUG
+//    wcl -ml -obmir -s -0 -xs -j -oe=128 -ol+ -ot ntvao.cxx mos6502.cxx -bcl=DOS /I. /DWATCOMDOS /DNDEBUG
 //
 // Simulates the Apple 1 runtime environment enough to run simple apps.
 // Uses the mos6502 emulator for the CPU
@@ -98,7 +98,7 @@ static void usage( char const * perr = 0 )
     exit( -1 );
 } //usage
 
-#ifdef WATCOM
+#ifdef WATCOMDOS
     #include <dos.h>
     uint32_t DosTimeInMS()
     {
@@ -110,7 +110,17 @@ static void usage( char const * perr = 0 )
         t += (uint32_t) tNow.hsecond;
         return t * 10;
     } //DosTimeInMS
-#endif //WATCOM
+#endif //WATCOMDOS
+
+#ifdef WATCOMLINUX
+    const uint64_t ms_per_ns = 1000000;
+    uint64_t LinuxTimeInMS()
+    {
+        struct timespec spec;
+        clock_gettime( CLOCK_REALTIME, &spec );
+        return spec.tv_sec * 1000LL + ( ( spec.tv_nsec + ( ms_per_ns / 2 ) ) / ms_per_ns );
+    } //LinuxTimeInMS
+#endif //WATCOMLINUX
 
 static void CreateMemoryDump()
 {
@@ -824,7 +834,7 @@ int main( int argc, char * argv[] )
             char c = *parg;
 
             if ( '-' == c
-#if defined( WATCOM ) || defined( _WIN32 )
+#if defined( WATCOMDOS ) || defined( _WIN32 )
                  || '/' == c
 #endif
                )
@@ -922,8 +932,10 @@ int main( int argc, char * argv[] )
 
         ConsoleConfiguration::ConvertRedirectedLFToCR( true );
 
-#ifdef WATCOM
+#ifdef WATCOMDOS
         uint32_t tStart = DosTimeInMS();
+#elif defined( WATCOMLINUX )
+        uint64_t tStart = LinuxTimeInMS();
 #else
         high_resolution_clock::time_point tStart = high_resolution_clock::now();
 #endif
@@ -936,8 +948,10 @@ int main( int argc, char * argv[] )
         if ( showPerformance )
         {
             char ac[ 100 ];
-#ifdef WATCOM
+#ifdef WATCOMDOS
             uint32_t elapsedMS = DosTimeInMS() - tStart;
+#elif defined( WATCOMLINUX )
+            uint32_t elapsedMS = (uint32_t) ( LinuxTimeInMS() - tStart );
 #else
             high_resolution_clock::time_point tDone = high_resolution_clock::now();
             uint32_t elapsedMS = (uint32_t) duration_cast<std::chrono::milliseconds>( tDone - tStart ).count();
