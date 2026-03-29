@@ -931,6 +931,7 @@ int main( int argc, char * argv[] )
             consoleConfig.EstablishConsoleOutput( 40, 24 );
 
         ConsoleConfiguration::ConvertRedirectedLFToCR( true );
+        consoleConfig.MakeKeyboardInputRaw();
 
 #ifdef WATCOMDOS
         uint32_t tStart = DosTimeInMS();
