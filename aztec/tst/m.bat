@@ -26,7 +26,7 @@ ntvdm ..\bin\as65 -L -O %1.o %1.a
 
 ntvdm ..\bin\as65 -L -O start.o start.a
 
-ntvdm ..\bin\ln65 -T -V -O %1.bin -B 1000 -C 1030 -D 1000 -U 2200 start.o %1.o ..\leelib\lee.lib
+ntvdm ..\bin\ln65 -T -V -O %1.bin -B 1000 -C 1030 -D 1000 -U 2200 start.o %1.o ..\lib\c.lib
 
 a1hex -a:0x1000 %1.bin
 

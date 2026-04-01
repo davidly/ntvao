@@ -1,0 +1,26 @@
+;
+; Startup for running apps built with the Aztec C compiler for Apple II 
+; on an Apple 1.
+
+; Apple 1 monitor API
+
+exitapp equ    $ff1f          ; ends the app / returns to the Apple 1 monitor
+
+        dseg
+        cseg
+        entry my_entry_
+        public  my_entry_
+        public .begin
+my_entry_
+        jsr     .begin
+
+        ; .begin calls's the internal _main_, which calls C's _main, which returns, then _main_ calls exit(), which fails on Apple 1 of course
+        ; so we won't come back here. C apps on Apple 1 should exit on their own using bye() in a1.c or something similar.
+
+        jsr exitapp
+
+        dseg
+        cseg
+        end
+
+     

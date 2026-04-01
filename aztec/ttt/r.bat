@@ -1,2 +1,2 @@
-ntvao /a:0x1030 -c -p tttaztec.hex
+ntvao /a:0x1030 -c -p ttt.hex
 
